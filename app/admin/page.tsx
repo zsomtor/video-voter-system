@@ -64,6 +64,26 @@ export default function AdminPage() {
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState<number | null>(null);
 
+  // Helper function to convert YouTube URL to thumbnail URL
+  const convertYouTubeUrlToThumbnail = (url: string): string => {
+    // Extract video ID from various YouTube URL formats
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/,  // youtube.com/watch?v=VIDEO_ID
+      /(?:youtu\.be\/)([a-zA-Z0-9_-]{11})/,              // youtu.be/VIDEO_ID
+      /(?:youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,    // youtube.com/embed/VIDEO_ID
+    ];
+
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match && match[1]) {
+        return `https://i.ytimg.com/vi/${match[1]}/maxresdefault.jpg`;
+      }
+    }
+
+    // If no match, return original (might already be a thumbnail URL or invalid)
+    return url;
+  };
+
   // Fetch rankings
   const fetchRankings = async () => {
     setLoading(true);
@@ -376,18 +396,23 @@ export default function AdminPage() {
               {/* Thumbnail URL */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Thumbnail URL (Opcionális)
+                  YouTube URL vagy Thumbnail URL (Opcionális)
                 </label>
                 <input
                   type="url"
                   value={formData.thumbnailUrl}
-                  onChange={(e) => setFormData({ ...formData, thumbnailUrl: e.target.value })}
+                  onChange={(e) => {
+                    const inputUrl = e.target.value;
+                    // Auto-convert YouTube URL to thumbnail URL
+                    const thumbnailUrl = convertYouTubeUrlToThumbnail(inputUrl);
+                    setFormData({ ...formData, thumbnailUrl });
+                  }}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
-                  placeholder="https://i.ytimg.com/vi/VIDEO_ID/maxresdefault.jpg"
+                  placeholder="https://www.youtube.com/watch?v=VIDEO_ID vagy https://i.ytimg.com/vi/VIDEO_ID/maxresdefault.jpg"
                   disabled={thumbnailFile !== null}
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  YouTube thumbnail URL meglévő videókhoz. Ha fájlt töltesz fel, ez figyelmen kívül marad.
+                  Beilleszthetsz YouTube videó linket (automatikusan átalakul thumbnail URL-re) vagy közvetlenül thumbnail URL-t.
                 </p>
               </div>
 
