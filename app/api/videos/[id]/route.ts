@@ -20,7 +20,13 @@ export async function DELETE(
       );
     }
 
-    // Delete the video (CASCADE will delete associated votes)
+    // First, delete all votes where this video was a winner or loser
+    await sql`
+      DELETE FROM votes
+      WHERE winner_id = ${videoId} OR loser_id = ${videoId}
+    `;
+
+    // Then delete the video
     const result = await sql`
       DELETE FROM videos
       WHERE id = ${videoId}
