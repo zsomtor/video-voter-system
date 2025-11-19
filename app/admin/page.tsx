@@ -188,8 +188,10 @@ export default function AdminPage() {
       if (response.ok) {
         // Refresh rankings
         await fetchRankings();
+        alert('Videó sikeresen törölve!');
       } else {
-        alert('Sikertelen törlés');
+        const errorData = await response.json();
+        alert(`Sikertelen törlés: ${errorData.error || 'Ismeretlen hiba'}\n${errorData.details || ''}`);
       }
     } catch (error) {
       console.error('Error deleting video:', error);
