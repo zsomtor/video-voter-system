@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import type { Video } from '@/lib/db';
 
 export default function PracticePage() {
@@ -168,14 +169,35 @@ export default function PracticePage() {
                   </div>
                 )}
 
-                {/* Thumbnail Simulation */}
-                <div className="bg-gradient-to-br from-green-100 to-blue-100 rounded-lg p-12 mb-4">
-                  <div className="text-center">
-                    <div className="text-6xl mb-4">🎬</div>
-                    <div className="text-2xl font-bold text-gray-800">
-                      {videoA.thumbnail_text}
+                {/* Thumbnail */}
+                <div className="mb-4">
+                  {videoA.thumbnail_url ? (
+                    <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-gray-100">
+                      <Image
+                        src={videoA.thumbnail_url}
+                        alt={videoA.title}
+                        fill
+                        sizes="(max-width: 768px) 100vw, 50vw"
+                        className="object-cover"
+                        priority
+                      />
+                      {/* Overlay with thumbnail text */}
+                      <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 hover:bg-opacity-10 transition">
+                        <div className="text-white text-2xl font-bold opacity-0 hover:opacity-100 transition">
+                          {videoA.thumbnail_text}
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="bg-gradient-to-br from-green-100 to-blue-100 rounded-lg p-12">
+                      <div className="text-center">
+                        <div className="text-6xl mb-4">🎬</div>
+                        <div className="text-2xl font-bold text-gray-800">
+                          {videoA.thumbnail_text}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Title */}
@@ -209,14 +231,35 @@ export default function PracticePage() {
                   </div>
                 )}
 
-                {/* Thumbnail Simulation */}
-                <div className="bg-gradient-to-br from-blue-100 to-green-100 rounded-lg p-12 mb-4">
-                  <div className="text-center">
-                    <div className="text-6xl mb-4">🎬</div>
-                    <div className="text-2xl font-bold text-gray-800">
-                      {videoB.thumbnail_text}
+                {/* Thumbnail */}
+                <div className="mb-4">
+                  {videoB.thumbnail_url ? (
+                    <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-gray-100">
+                      <Image
+                        src={videoB.thumbnail_url}
+                        alt={videoB.title}
+                        fill
+                        sizes="(max-width: 768px) 100vw, 50vw"
+                        className="object-cover"
+                        priority
+                      />
+                      {/* Overlay with thumbnail text */}
+                      <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 hover:bg-opacity-10 transition">
+                        <div className="text-white text-2xl font-bold opacity-0 hover:opacity-100 transition">
+                          {videoB.thumbnail_text}
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="bg-gradient-to-br from-blue-100 to-green-100 rounded-lg p-12">
+                      <div className="text-center">
+                        <div className="text-6xl mb-4">🎬</div>
+                        <div className="text-2xl font-bold text-gray-800">
+                          {videoB.thumbnail_text}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Title */}

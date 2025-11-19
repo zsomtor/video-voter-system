@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import type { SourceType } from '@/lib/db';
 
 interface RankedVideo {
@@ -8,6 +9,7 @@ interface RankedVideo {
   id: number;
   title: string;
   thumbnail_text: string;
+  thumbnail_url: string | null;
   actual_views: number | null;
   elo_rating: number;
   vote_count: number;
@@ -51,11 +53,14 @@ export default function AdminPage() {
     guestName: '',
     title: '',
     thumbnailText: '',
+    thumbnailUrl: '',
     actualViews: '',
     sourceType: 'own' as SourceType,
     channelName: 'Bazu Podcast',
     isTrainingSet: true,
   });
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   // Fetch rankings
@@ -78,12 +83,39 @@ export default function AdminPage() {
     setSubmitting(true);
 
     try {
+      let thumbnailUrl = formData.thumbnailUrl;
+
+      // Upload file if provided
+      if (thumbnailFile) {
+        setUploading(true);
+        const uploadFormData = new FormData();
+        uploadFormData.append('file', thumbnailFile);
+
+        const uploadResponse = await fetch('/api/upload-thumbnail', {
+          method: 'POST',
+          body: uploadFormData,
+        });
+
+        if (uploadResponse.ok) {
+          const uploadData = await uploadResponse.json();
+          thumbnailUrl = uploadData.url;
+        } else {
+          const errorData = await uploadResponse.json();
+          alert(errorData.error || 'Sikertelen fájl feltöltés');
+          setSubmitting(false);
+          setUploading(false);
+          return;
+        }
+        setUploading(false);
+      }
+
       const response = await fetch('/api/videos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: formData.title,
           thumbnailText: formData.thumbnailText,
+          thumbnailUrl: thumbnailUrl || null,
           sourceType: formData.sourceType,
           actualViews: formData.actualViews ? parseInt(formData.actualViews) : null,
           channelName: formData.channelName || null,
@@ -98,11 +130,13 @@ export default function AdminPage() {
           guestName: '',
           title: '',
           thumbnailText: '',
+          thumbnailUrl: '',
           actualViews: '',
           sourceType: 'own',
           channelName: 'Bazu Podcast',
           isTrainingSet: true,
         });
+        setThumbnailFile(null);
         setShowAddForm(false);
         // Refresh rankings
         await fetchRankings();
@@ -114,6 +148,7 @@ export default function AdminPage() {
       alert('Hálózati hiba');
     } finally {
       setSubmitting(false);
+      setUploading(false);
     }
   };
 
@@ -312,6 +347,58 @@ export default function AdminPage() {
                 </p>
               </div>
 
+              {/* Thumbnail URL */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Thumbnail URL (Opcionális)
+                </label>
+                <input
+                  type="url"
+                  value={formData.thumbnailUrl}
+                  onChange={(e) => setFormData({ ...formData, thumbnailUrl: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                  placeholder="https://i.ytimg.com/vi/VIDEO_ID/maxresdefault.jpg"
+                  disabled={thumbnailFile !== null}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  YouTube thumbnail URL meglévő videókhoz. Ha fájlt töltesz fel, ez figyelmen kívül marad.
+                </p>
+              </div>
+
+              {/* Thumbnail File Upload */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Thumbnail Feltöltés (Opcionális)
+                </label>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/webp"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      // Validate file size (2MB)
+                      if (file.size > 2 * 1024 * 1024) {
+                        alert('A fájl mérete maximum 2MB lehet');
+                        e.target.value = '';
+                        return;
+                      }
+                      setThumbnailFile(file);
+                    } else {
+                      setThumbnailFile(null);
+                    }
+                  }}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Tölts fel 1280x720px képet (max 2MB) új teszt packagingekhez. Formátum: JPG, PNG, WebP.
+                </p>
+                {thumbnailFile && (
+                  <div className="mt-2 text-sm text-green-600">
+                    ✓ Kiválasztva: {thumbnailFile.name} ({Math.round(thumbnailFile.size / 1024)}KB)
+                  </div>
+                )}
+              </div>
+
               {/* Actual Views */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -354,10 +441,10 @@ export default function AdminPage() {
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || uploading}
                 className="w-full bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition disabled:opacity-50"
               >
-                {submitting ? 'Hozzáadás...' : 'Videó Hozzáadása'}
+                {uploading ? 'Feltöltés...' : submitting ? 'Hozzáadás...' : 'Videó Hozzáadása'}
               </button>
             </form>
           </div>
@@ -407,38 +494,60 @@ export default function AdminPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        {video.guest_name && (
-                          <div className="text-sm font-semibold text-purple-600 mb-1">
-                            🎙️ {video.guest_name}
+                        <div className="flex gap-3">
+                          {/* Thumbnail Preview */}
+                          {video.thumbnail_url ? (
+                            <div className="relative w-24 h-14 flex-shrink-0 rounded overflow-hidden bg-gray-100">
+                              <Image
+                                src={video.thumbnail_url}
+                                alt={video.title}
+                                fill
+                                sizes="96px"
+                                className="object-cover"
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-24 h-14 flex-shrink-0 rounded bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center">
+                              <span className="text-2xl">🎬</span>
+                            </div>
+                          )}
+
+                          {/* Video Info */}
+                          <div className="flex-1 min-w-0">
+                            {video.guest_name && (
+                              <div className="text-sm font-semibold text-purple-600 mb-1">
+                                🎙️ {video.guest_name}
+                              </div>
+                            )}
+                            <div className="font-medium text-gray-900 mb-1">
+                              {video.title}
+                            </div>
+                            <div className="text-sm text-gray-500 truncate">
+                              📸 {video.thumbnail_text}
+                            </div>
+                            <div className="flex gap-2 mt-1 flex-wrap">
+                              {video.source_type === 'own' && (
+                                <span className="inline-block bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
+                                  Saját
+                                </span>
+                              )}
+                              {video.source_type === 'competitor' && (
+                                <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
+                                  Versenytárs
+                                </span>
+                              )}
+                              {video.source_type === 'test' && (
+                                <span className="inline-block bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs">
+                                  Teszt
+                                </span>
+                              )}
+                              {video.is_training_set && (
+                                <span className="inline-block bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs">
+                                  Edzési
+                                </span>
+                              )}
+                            </div>
                           </div>
-                        )}
-                        <div className="font-medium text-gray-900 mb-1">
-                          {video.title}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          📸 {video.thumbnail_text}
-                        </div>
-                        <div className="flex gap-2 mt-1">
-                          {video.source_type === 'own' && (
-                            <span className="inline-block bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
-                              Saját
-                            </span>
-                          )}
-                          {video.source_type === 'competitor' && (
-                            <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
-                              Versenytárs
-                            </span>
-                          )}
-                          {video.source_type === 'test' && (
-                            <span className="inline-block bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs">
-                              Teszt
-                            </span>
-                          )}
-                          {video.is_training_set && (
-                            <span className="inline-block bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs">
-                              Edzési
-                            </span>
-                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">

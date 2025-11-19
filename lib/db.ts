@@ -6,6 +6,7 @@ export interface Video {
   id: number;
   title: string;
   thumbnail_text: string;
+  thumbnail_url: string | null;
   actual_views: number | null;
   elo_rating: number;
   vote_count: number;
@@ -39,6 +40,7 @@ export async function initDatabase() {
         id SERIAL PRIMARY KEY,
         title TEXT NOT NULL,
         thumbnail_text TEXT NOT NULL,
+        thumbnail_url TEXT,
         actual_views INTEGER,
         elo_rating INTEGER DEFAULT 1500,
         vote_count INTEGER DEFAULT 0,
@@ -181,13 +183,15 @@ export async function addVideo(
   channelName: string | null = null,
   guestName: string | null = null,
   isTrainingSet: boolean = false,
-  initialRating: number = 1500
+  initialRating: number = 1500,
+  thumbnailUrl: string | null = null
 ): Promise<Video> {
   try {
     const result = await sql<Video>`
       INSERT INTO videos (
         title,
         thumbnail_text,
+        thumbnail_url,
         source_type,
         actual_views,
         channel_name,
@@ -198,6 +202,7 @@ export async function addVideo(
       VALUES (
         ${title},
         ${thumbnailText},
+        ${thumbnailUrl},
         ${sourceType},
         ${actualViews},
         ${channelName},
