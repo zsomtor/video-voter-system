@@ -1,196 +1,242 @@
-# YouTube Video Voter System
+# Bazu Podcast - YouTube Videó Szavazó Rendszer
 
-A web application that uses an **ELO rating algorithm** to predict YouTube video performance based on pairwise comparisons of titles and thumbnails.
+Egy webalkalmazás, amely **ELO algoritmussal** becsli meg a YouTube videók teljesítményét a címek és thumbnailek páronkénti összehasonlítása alapján.
 
-## What This Does
+## Mi Ez?
 
-This app helps you test different YouTube video packaging (titles + thumbnails) by having users vote on which videos they'd click on. Using an ELO rating system (like chess rankings), it predicts how well your new packaging will perform compared to your existing videos.
+Ez az alkalmazás segít tesztelni különböző YouTube videó packagingeket (cím + thumbnail) úgy, hogy a felhasználók szavaznak, melyikre kattintanának. Egy ELO rangsoroló rendszert használva (mint a sakknál) megjósolja, hogy az új packagingek hogyan teljesítenek a meglévő videóidhoz képest.
 
-### Key Features
+### Főbb Funkciók
 
-- **Pairwise Voting**: Users choose between two video options at a time
-- **ELO Algorithm**: Sophisticated ranking system that adjusts based on vote outcomes
-- **Performance Prediction**: Estimates view counts for new packaging based on ratings
-- **Benchmark System**: Compare against your own past videos and competitors
-- **Confidence Scoring**: Shows how reliable the predictions are based on vote count
-- **Admin Dashboard**: View rankings, add videos, and track metrics
+✅ **Páronkénti Szavazás**: A felhasználók egyszerre két videó közül választanak
+✅ **ELO Algoritmus**: Kifinomult rangsoroló rendszer, amely a szavazatok alapján frissül
+✅ **Teljesítmény Előrejelzés**: Csatorna-specifikus kalibráció a pontos becsléshez
+✅ **Benchmark Rendszer**: Összehasonlítás a saját múltbeli és versenytárs videókkal
+✅ **Megbízhatósági Pontozás**: Mutatja, mennyire megbízható az előrejelzés
+✅ **Gyakorló Mód**: Gyakorolj a saját valós videóidon, lásd a helyes választ
+✅ **Admin Dashboard**: Rangsorok megtekintése, videók hozzáadása, részletes elemzés
+✅ **Magyar Nyelv**: Teljes magyar nyelvű felület
 
-## How It Works
+## Hogyan Működik?
 
-### The Algorithm
+### Az Algoritmus
 
-1. **Initial Ratings**: Videos start at 1500 ELO (or calculated from actual view count)
-2. **Voting**: When users pick video A over B, ratings adjust:
-   - Winner gains points
-   - Loser loses points
-   - Upset victories cause larger swings
-3. **Prediction**: After collecting votes, compare your test video's rating to known videos
-4. **Estimation**: Interpolate expected views based on rating position
+1. **Kezdő Értékelések**: A videók 1500 ELO-val indulnak (vagy a tényleges nézettség alapján kalibrálva)
+2. **Szavazás**: Amikor a felhasználók az A videót választják B helyett:
+   - A nyertes pontokat kap
+   - A vesztes pontokat veszít
+   - A meglepetés győzelmek nagyobb változásokat okoznak
+3. **Kalibráció**: A rendszer a SAJÁT csatornád múltbeli teljesítményeiből tanul
+4. **Előrejelzés**: Az új packaging értékelése alapján becsüli meg a várható nézettséget
 
-### ELO Formula
+### Kalibráció (A Titok!)
 
-```
-Expected Score = 1 / (1 + 10^((Rating_B - Rating_A) / 400))
-New Rating = Old Rating + K * (Actual - Expected)
-```
+Ez a legfontosabb különbség más rendszerekhez képest:
 
-Where:
-- K = 32 (how quickly ratings change)
-- Actual = 1 for winner, 0 for loser
-- Expected = probability of winning
+**Általános Formula**: "1750 ELO = ~80K nézés" (minden csatornára ugyanaz)
 
-### View Count Mapping
+**Bazu Kalibráció**: "A TE 10 Bazu epizódod alapján tanulja meg: 1750 ELO = XY nézés a Bazu csatornán"
 
-```
-Rating 1500 = ~10,000 views (baseline)
-Rating 1900 = ~100,000 views
-Rating 2300 = ~1,000,000 views
-```
+Példa:
+- Silka Ágnes epizód: 149K nézés → 1891 ELO
+- Kapitány István epizód: 41K nézés → 1643 ELO
+- ÚJ teszt packaging: 1750 ELO
+- **Becslés**: ~70-80K nézés (mert ez van a két ismert között)
 
-Each 400 points ≈ 10x increase in views (logarithmic scale)
+## Gyors Indítás (Bazu Használatra)
 
-## Deployment Guide
+### 1. Telepítés Vercelre
 
-### Deploy to Vercel (Recommended)
+```bash
+# 1. GitHub repo létrehozása és push
+git remote add origin <your-github-repo>
+git push -u origin main
 
-1. **Fork/Clone this repository**
+# 2. Vercel.com-ra ugrás
+# - New Project
+# - Import GitHub repo
+# - Auto-detect Next.js
 
-2. **Deploy to Vercel**:
-   - Go to [vercel.com](https://vercel.com)
-   - Click "New Project"
-   - Import your repository
-   - Vercel will auto-detect Next.js
-
-3. **Add Vercel Postgres**:
-   - In your Vercel project dashboard, go to "Storage"
-   - Click "Create Database"
-   - Select "Postgres"
-   - Follow the prompts to create your database
-   - Vercel will automatically add environment variables
-
-4. **Initialize Database**:
-   - After deployment, visit: `https://your-app.vercel.app/api/init`
-   - This creates the database tables
-
-5. **Seed Example Data** (Optional):
-   - Visit: `https://your-app.vercel.app/api/seed`
-   - This adds 14 example videos to get started
-
-6. **Start Using**:
-   - Main voting page: `https://your-app.vercel.app`
-   - Admin dashboard: `https://your-app.vercel.app/admin`
-
-### Environment Variables
-
-When using Vercel Postgres, these are automatically set:
-
-```
-POSTGRES_URL
-POSTGRES_PRISMA_URL
-POSTGRES_URL_NON_POOLING
-POSTGRES_USER
-POSTGRES_HOST
-POSTGRES_PASSWORD
-POSTGRES_DATABASE
+# 3. Database hozzáadása
+# - Storage → Create Database → Postgres
+# - Environment változók automatikusan beállítódnak
 ```
 
-## Local Development
+### 2. Adatbázis Inicializálás
 
-### Prerequisites
+Deploy után:
+1. Látogass el: `https://your-app.vercel.app/api/init`
+2. Meg kell látni: `{"success": true}`
 
-- Node.js 18+ installed
-- A Postgres database (local or remote)
+### 3. Bazu Epizódok Hozzáadása
 
-### Setup
+Menj: `https://your-app.vercel.app/admin`
 
-1. **Clone the repository**:
-   ```bash
-   git clone <your-repo-url>
-   cd video-voter-system
-   ```
+#### Első Lépés: Add Hozzá a 10 Valós Bazu Epizódot
 
-2. **Install dependencies**:
-   ```bash
-   npm install
-   ```
+Minden epizódnál:
+- **Típus**: Saját (Bazu Podcast)
+- **Vendég Neve**: Pl. "Kapitány István"
+- **Videó Címe**: A YouTube címe
+- **Thumbnail Szöveg**: A thumbnail fő szövege (pl. "KRIPTÓ TITKOK")
+- **Tényleges Nézettség**: Pl. 41000 (ezt látod a YouTube Studio-ban)
+- **Használd kalibrációhoz**: ✅ Bejelölve
 
-3. **Set up environment variables**:
-   ```bash
-   cp .env.example .env
-   ```
-   Edit `.env` with your Postgres connection details.
+**Fontos**: Minél több valós epizódot adsz hozzá ismert nézettséggel, annál pontosabb lesz az algoritmus!
 
-4. **Initialize database**:
-   ```bash
-   npm run dev
-   ```
-   Then visit: `http://localhost:3000/api/init`
-
-5. **Seed example data** (optional):
-   Visit: `http://localhost:3000/api/seed`
-
-6. **Start developing**:
-   ```bash
-   npm run dev
-   ```
-   Open [http://localhost:3000](http://localhost:3000)
-
-## Usage Guide
-
-### Adding Videos
-
-1. Go to the **Admin Dashboard** (`/admin`)
-2. Click **"+ Add New Video"**
-3. Fill in:
-   - **Title**: The video title
-   - **Thumbnail Text**: Main text that appears on thumbnail
-   - **Actual Views** (optional): If this is an existing video, enter view count for calibration
-   - **Is Test**: Check if this is new packaging you're testing
-   - **Is Competitor**: Check if this is a competitor's video
-
-### Getting Votes
-
-Share the main page URL (`/`) with your audience. They:
-1. See two video options side-by-side
-2. Click on the one they'd rather watch
-3. Immediately get a new comparison
-4. Repeat as many times as they want
-
-### Reading Results
-
-In the Admin Dashboard, you'll see:
-
-- **ELO Rating**: Higher = more appealing packaging
-- **Tier**: Performance level (S-Tier = elite, D-Tier = below average)
-- **Vote Count**: How many comparisons this video has been in
-- **Confidence**: How reliable the rating is (more votes = higher confidence)
-- **Estimated Views**: Predicted view count based on rating
-- **Actual Views**: Real performance (for benchmark videos)
-
-### Interpreting Predictions
-
-Example:
-- Your 200k view video has rating 1900
-- Your new test video has rating 1750 (after 50 votes, 85% confidence)
-- Your 50k view video has rating 1600
-
-**Prediction**: Your new packaging will likely perform between 50k-200k views, probably around 80-100k views.
-
-## API Reference
-
-### GET `/api/pair`
-Returns two random videos for comparison.
-
-**Response**:
-```json
-{
-  "videoA": { /* video object */ },
-  "videoB": { /* video object */ }
-}
+Példa a 10 epizódhoz:
+```
+1. Silka Ágnes - 149,000 nézés
+2. Kapitány István - 41,000 nézés
+3. [További 8 vendég a nézettséggel]
 ```
 
-### POST `/api/vote`
-Records a vote and updates ELO ratings.
+#### Második Lépés: Teszt Packagingek Hozzáadása
+
+Új packaging variációk teszteléséhez:
+- **Típus**: Teszt (új packaging)
+- **Videó Címe**: Az új cím amit tesztelni akarsz
+- **Thumbnail Szöveg**: Az új thumbnail szöveg
+- **Tényleges Nézettség**: Hagyd üresen
+- **Használd kalibrációhoz**: ❌ Nem
+
+#### Harmadik Lépés (Opcionális): Versenytárs Videók
+
+Benchmarkoláshoz:
+- **Típus**: Versenytárs
+- **Csatorna Neve**: Pl. "Konkurens Podcast"
+- **Tényleges Nézettség**: Add meg a nézettséget
+- **Használd kalibrációhoz**: ❌ Nem (hacsak nem azonos niche-ben van)
+
+### 4. Szavazás Indítása
+
+Küldd szét az URL-t: `https://your-app.vercel.app`
+
+A felhasználók:
+1. Két videó közül választanak
+2. Kattintanak amelyikre inkább rákkattintanának
+3. Azonnal kapnak új párosítást
+4. Annyi ideig szavazhatnak amennyit akarnak
+
+**Ajánlott**: Minimum 50 szavazat packagingenként a megbízható eredményhez.
+
+## Oldal Struktúra
+
+### `/` - Főoldal (Szavazás)
+Ide jönnek a szavazók. Két videó közül választanak.
+
+**Funkciók**:
+- A/B páronkénti összehasonlítás
+- Szavazatszámláló
+- Linkek a gyakorló módhoz és adminhoz
+
+### `/practice` - Gyakorló Mód
+Gyakorolj a valós Bazu epizódokon! Lásd meg, jól tippeltél-e.
+
+**Funkciók**:
+- Csak edzési videók (ismert nézettséggel)
+- Szavazás után látod a valós számokat
+- Nincs mentés az adatbázisba
+- Segít fejleszteni az intuíciót
+
+**Tipp**: Csináld ezt először pár percig, mielőtt a teszt videókra szavaznál!
+
+### `/admin` - Admin Dashboard
+Itt látod az eredményeket és kezeled a videókat.
+
+**Funkciók**:
+1. **Kalibráció Állapot Banner**
+   - Mennyire megbízható az algoritmus
+   - Hány edzési videód van
+   - Nézettség tartomány
+
+2. **Statisztikák**
+   - Összes videó
+   - Összes szavazat
+   - Átlag szavazat/videó
+   - Edzési videók száma
+
+3. **Videók Hozzáadása**
+   - Űrlap az új videókhoz
+   - Automatikus típus váltás
+   - Kalibráció opciók
+
+4. **Rangsor Táblázat**
+   - Összes videó ELO szerint rendezve
+   - Valós vs. becsült nézettség
+   - Megbízhatósági mutatók
+   - Színkódolt teljesítmény szintek
+
+5. **🧪 Teszt Videók Teljesítménye**
+   - Külön kiemelt szekció
+   - Összehasonlítás a valós epizódokkal
+   - "Jobb mint X, gyengébb mint Y"
+   - Becsült nézettség tartomány
+   - Vizuális teljesítmény panelek
+
+## Eredmények Értelmezése
+
+### Kalibráció Állapotok
+
+🟢 **Kiváló Kalibráció** (10+ videó, 70%+ megbízhatóság)
+- Az előrejelzések nagyon pontosak
+- Biztonságosan dönthetik alapján
+
+🔵 **Jó Kalibráció** (5+ videó, 50%+ megbízhatóság)
+- Az előrejelzések használhatók
+- Több adat = jobb becslések
+
+🟠 **Gyenge Kalibráció** (<5 videó)
+- Adj hozzá több edzési videót!
+- Legalább 5 kell, 10 az ideális
+
+🔴 **Nincs Kalibráció** (0 videó)
+- Add hozzá a valós epizódjaidat először!
+
+### Megbízhatósági Szintek (Packagingenként)
+
+- **0-30 szavazat**: ❌ Nem megbízható - több szavazat kell
+- **30-50 szavazat**: 🟡 Közepes - kezd kirajzolódni
+- **50-100 szavazat**: 🟢 Jó - megbízható eredmény
+- **100+ szavazat**: ✅ Kiváló - nagyon megbízható
+
+### Példa Értelmezés
+
+```
+📊 Teszt Videó: "Hogyan építs sikeres podcastot"
+Thumbnail: "PODCAST TITKOK"
+
+Rangsor: #3 / 12 videóból
+ELO: 1789
+Becsült Nézettség: 87,000
+Megbízhatóság: 85% (68 szavazat)
+
+⬆️ Jobb mint: Kovács Péter (65K nézés)
+⬇️ Gyengébb mint: Silka Ágnes (149K nézés)
+
+Becslés: Ez a packaging valószínűleg 87,000 megtekintést fog kapni
+(65,000 és 149,000 között)
+```
+
+**Mit jelent ez?**
+- Ez a packaging jobban fog teljesíteni, mint a Kovács Péter epizód
+- De nem fogja elérni a Silka Ágnes epizód sikerét
+- Várható: ~87K nézés
+- Megbízhatóság: 85% (jó, további szavazatokkal növelhető)
+
+## API Dokumentáció
+
+### `GET /api/init`
+Adatbázis inicializálás. Futtatd egyszer a deploy után.
+
+### `GET /api/pair`
+Két véletlenszerű videó lekérése szavazáshoz.
+
+### `GET /api/practice-pair`
+Két edzési videó lekérése gyakorló módhoz.
+
+### `POST /api/vote`
+Szavazat rögzítése és ELO frissítés.
 
 **Body**:
 ```json
@@ -200,183 +246,177 @@ Records a vote and updates ELO ratings.
 }
 ```
 
-**Response**:
+### `GET /api/rankings`
+Összes videó rangsorolva + kalibráció.
+
+**Válasz**:
 ```json
 {
-  "success": true,
-  "winner": {
-    "id": 1,
-    "oldRating": 1500,
-    "newRating": 1516,
-    "change": 16
-  },
-  "loser": { /* ... */ }
+  "totalVotes": 450,
+  "totalVideos": 12,
+  "rankings": [...],
+  "calibration": {
+    "isCalibrated": true,
+    "channelName": "Bazu Podcast",
+    "trainingDataCount": 10,
+    "minViews": 6000,
+    "maxViews": 156000,
+    "confidence": 0.85,
+    "status": "excellent",
+    "message": "Kiváló kalibráció..."
+  }
 }
 ```
 
-### GET `/api/rankings`
-Returns all videos ranked by ELO with predictions.
-
-**Response**:
-```json
-{
-  "totalVotes": 150,
-  "totalVideos": 10,
-  "rankings": [ /* array of ranked videos */ ]
-}
-```
-
-### POST `/api/videos`
-Adds a new video.
+### `POST /api/videos`
+Új videó hozzáadása.
 
 **Body**:
 ```json
 {
-  "title": "Amazing Video Title",
-  "thumbnailText": "CLICK ME",
-  "actualViews": 100000,
-  "isTest": false,
-  "isCompetitor": false
+  "title": "Epizód cím",
+  "thumbnailText": "THUMBNAIL SZÖVEG",
+  "sourceType": "own",
+  "actualViews": 85000,
+  "channelName": "Bazu Podcast",
+  "guestName": "Kapitány István",
+  "isTrainingSet": true
 }
 ```
 
-### GET `/api/init`
-Initializes database tables (run once).
+### `GET /api/benchmark/:id`
+Benchmark összehasonlítás egy adott videóhoz.
 
-### GET `/api/seed`
-Seeds database with example videos.
-
-## Project Structure
+## Projekt Struktúra
 
 ```
 video-voter-system/
 ├── app/
-│   ├── page.tsx              # Main voting interface
+│   ├── page.tsx                   # Főoldal - szavazás
+│   ├── practice/
+│   │   └── page.tsx              # Gyakorló mód
 │   ├── admin/
-│   │   └── page.tsx          # Admin dashboard
+│   │   └── page.tsx              # Admin dashboard
 │   ├── api/
-│   │   ├── pair/route.ts     # Get random video pair
-│   │   ├── vote/route.ts     # Record votes
-│   │   ├── rankings/route.ts # Get rankings
-│   │   ├── videos/route.ts   # Add videos
-│   │   ├── init/route.ts     # Initialize DB
-│   │   └── seed/route.ts     # Seed data
-│   ├── layout.tsx            # Root layout
-│   └── globals.css           # Global styles
+│   │   ├── init/route.ts         # DB inicializálás
+│   │   ├── pair/route.ts         # Véletlenszerű párosítás
+│   │   ├── practice-pair/route.ts # Edzési párosítás
+│   │   ├── vote/route.ts         # Szavazat rögzítés
+│   │   ├── rankings/route.ts     # Rangsorok + kalibráció
+│   │   ├── videos/route.ts       # Videó hozzáadás
+│   │   └── benchmark/[id]/route.ts # Benchmark lekérdezés
+│   ├── layout.tsx                # Root layout
+│   └── globals.css               # Globális stílusok
 ├── lib/
-│   ├── db.ts                 # Database functions
-│   └── elo.ts                # ELO algorithm
+│   ├── db.ts                     # Adatbázis műveletek
+│   ├── elo.ts                    # ELO algoritmus
+│   └── calibration.ts            # Csatorna-specifikus kalibráció
 ├── package.json
 ├── tsconfig.json
-├── tailwind.config.ts
-├── next.config.js
 └── README.md
 ```
 
-## Technology Stack
+## Adatbázis Séma
+
+### `videos` tábla
+
+| Mező | Típus | Leírás |
+|------|-------|--------|
+| `id` | serial | Elsődleges kulcs |
+| `title` | text | Videó címe |
+| `thumbnail_text` | text | Thumbnail fő szövege |
+| `actual_views` | integer | Tényleges nézettség (nullable) |
+| `elo_rating` | integer | ELO értékelés (default: 1500) |
+| `vote_count` | integer | Szavazatok száma |
+| `source_type` | text | 'own', 'competitor', vagy 'test' |
+| `channel_name` | text | Csatorna neve (nullable) |
+| `guest_name` | text | Vendég neve (nullable) |
+| `is_training_set` | boolean | Használd kalibrációhoz? |
+| `created_at` | timestamp | Létrehozás dátuma |
+
+### `votes` tábla
+
+| Mező | Típus | Leírás |
+|------|-------|--------|
+| `id` | serial | Elsődleges kulcs |
+| `winner_id` | integer | Nyertes videó ID |
+| `loser_id` | integer | Vesztes videó ID |
+| `created_at` | timestamp | Szavazás dátuma |
+
+## Technológiai Stack
 
 - **Framework**: Next.js 14 (React)
-- **Language**: TypeScript
+- **Nyelv**: TypeScript
 - **Styling**: Tailwind CSS
-- **Database**: Vercel Postgres (PostgreSQL)
+- **Adatbázis**: Vercel Postgres (PostgreSQL)
 - **Deployment**: Vercel
-- **Algorithm**: ELO Rating System
+- **Algoritmus**: ELO Rating System + Linear Regression Calibration
 
-## Algorithm Details
+## Tippek a Legjobb Eredményekhez
 
-### Why ELO?
+### 1. Építs Erős Edzési Adathalmazt
+- ✅ Add hozzá **mind a 10 Bazu epizódot** ismert nézettséggel
+- ✅ Használj széles nézettség tartományt (pl. 6K - 156K)
+- ✅ Jelöld be mindet "edzési" videóként
 
-ELO is perfect for this because:
-- Handles pairwise comparisons naturally
-- Self-balancing (ratings stabilize over time)
-- Proven system (chess, gaming, sports)
-- Works with incomplete data
-- Handles new items gracefully
+### 2. Gyűjts Elég Szavazatot
+- 🎯 **Minimum**: 50 szavazat teszt packagingenként
+- 🎯 **Ideális**: 100+ szavazat
+- 💡 Küldd szét a linket a közösségednek!
 
-### Rating Tiers
+### 3. Tesztelj Változatokat
+- Hozz létre 3-5 különböző packaging variációt
+- Teszteld a címeket külön-külön
+- Teszteld a thumbnail szövegeket külön-külön
+- Kombináld a legjobb elemeket
 
-- **S-Tier** (2200+): Elite - Top 1% performance
-- **A-Tier** (1900-2199): Excellent performance
-- **B-Tier** (1600-1899): Above average
-- **C-Tier** (1400-1599): Average performance
-- **D-Tier** (<1400): Below average
+### 4. Értelmezd Óvatosan
+- ⚠️ <30 szavazat = csak irány, nem végleges
+- ✅ 50+ szavazat = megbízható előrejelzés
+- 🎯 100+ szavazat = nagyon pontos
 
-### Confidence Calculation
+### 5. Használd a Gyakorló Módot
+- Először gyakorolj a valós epizódokon
+- Fejleszd az intuíciódat
+- Később pontosabban fogsz szavazni
 
-Confidence increases with votes using a sigmoid function:
-- 0 votes = 0% confidence
-- 30 votes = 63% confidence
-- 50 votes = 81% confidence
-- 100 votes = 96% confidence
+## Hibaelhárítás
 
-## Tips for Best Results
+### "Nincs elég videó az adatbázisban"
+**Megoldás**: Adj hozzá legalább 2 videót az `/admin` oldalon.
 
-1. **Add Benchmarks**: Include several of your past videos with known view counts
-2. **Add Competitors**: Include successful videos from your niche for reference
-3. **Get Volume**: More votes = better predictions (aim for 50+ votes per video)
-4. **Test Variations**: Create multiple test versions to find the best packaging
-5. **Iterate**: Use results to create new variations and re-test
+### "Nincs kalibráció"
+**Megoldás**: Adj hozzá legalább 5 saját videót ismert nézettséggel és jelöld be őket edzési videóként.
 
-## Customization
+### "Gyenge kalibráció"
+**Megoldás**: Adj hozzá még több edzési videót. Ideális: 10+
 
-### Adjust ELO Sensitivity
+### Adatbázis kapcsolati hiba
+**Ellenőrizd**:
+1. Vercel Postgres helyesen van-e linkelve
+2. Environment változók be vannak-e állítva
+3. `/api/init` végpont meghívva lett-e
 
-In `lib/elo.ts`, change the K-factor:
-```typescript
-const K_FACTOR = 32; // Higher = faster rating changes
-```
+## Jövőbeli Fejlesztési Lehetőségek
 
-### Modify View Count Formula
+- 🖼️ Valódi thumbnail képek feltöltése
+- 📊 Történeti teljesítmény tracking
+- 📈 Grafikonok az ELO változásokról
+- 🔒 Bejelentkezés az admin panelhez
+- 📧 Email értesítések az eredményekről
+- 📱 Mobil app verzió
+- 🤖 AI-generált thumbnail javaslatok
 
-In `lib/elo.ts`, adjust the logarithmic mapping:
-```typescript
-const baseViews = 10000;
-const rating = DEFAULT_RATING + 400 * Math.log10(views / baseViews);
-```
+## Támogatás
 
-### Change Styling
+Kérdés vagy probléma esetén nyiss egy GitHub issue-t!
 
-Edit `app/globals.css` and Tailwind classes in components.
+## Licenc
 
-## Troubleshooting
-
-### "Not enough videos in database"
-- Visit `/api/seed` to add example videos, or
-- Add videos manually through the admin dashboard
-
-### Database connection errors
-- Check your Postgres environment variables
-- Ensure Vercel Postgres is properly linked to your project
-- Try visiting `/api/init` to initialize tables
-
-### Votes not updating
-- Check browser console for errors
-- Verify API routes are working
-- Check database connection
-
-## Future Enhancements
-
-Potential features to add:
-- Image upload for actual thumbnails
-- A/B test groups (test multiple variants at once)
-- Historical performance tracking
-- Export results to CSV
-- User authentication for admin panel
-- Vote limiting per IP/user
-- Real-time leaderboard updates
-
-## License
-
-MIT License - feel free to use for your projects!
-
-## Contributing
-
-Contributions welcome! Please open an issue or PR.
-
-## Support
-
-For issues or questions, please open a GitHub issue.
+MIT License - használd szabadon a saját projektjeidhez!
 
 ---
 
-Built with Next.js, TypeScript, and the ELO rating algorithm.
+**Készítve a Bazu Podcast csapatának 🎙️**
+
+Használd bátran, hogy megtaláld a tökéletes packaging-et minden epizódhoz!
