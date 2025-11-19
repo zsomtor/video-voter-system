@@ -61,13 +61,32 @@ export async function calibrateFromTrainingSet(): Promise<CalibrationData> {
   const logViews = trainingVideos.map(v => Math.log10(v.actual_views!));
   const n = trainingVideos.length;
 
-  const sumX = ratings.reduce((a, b) => a + b, 0);
-  const sumY = logViews.reduce((a, b) => a + b, 0);
-  const sumXY = ratings.reduce((sum, x, i) => sum + x * logViews[i], 0);
-  const sumX2 = ratings.reduce((sum, x) => sum + x * x, 0);
+  let slope = 0;
+  let intercept = 0;
 
-  const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
-  const intercept = (sumY - slope * sumX) / n;
+  if (n === 1) {
+    // With only 1 video, use a default slope and calculate intercept
+    // Default slope: 0.0005 (roughly: 200 ELO points = 1 order of magnitude in views)
+    slope = 0.0005;
+    intercept = logViews[0] - slope * ratings[0];
+  } else {
+    // Standard linear regression for 2+ videos
+    const sumX = ratings.reduce((a, b) => a + b, 0);
+    const sumY = logViews.reduce((a, b) => a + b, 0);
+    const sumXY = ratings.reduce((sum, x, i) => sum + x * logViews[i], 0);
+    const sumX2 = ratings.reduce((sum, x) => sum + x * x, 0);
+
+    const denominator = (n * sumX2 - sumX * sumX);
+
+    if (denominator === 0) {
+      // All ratings are identical - use default slope
+      slope = 0.0005;
+      intercept = sumY / n;
+    } else {
+      slope = (n * sumXY - sumX * sumY) / denominator;
+      intercept = (sumY - slope * sumX) / n;
+    }
+  }
 
   // Calculate confidence based on:
   // - Number of training videos (more = better)
