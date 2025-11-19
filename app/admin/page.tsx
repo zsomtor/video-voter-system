@@ -301,8 +301,8 @@ export default function AdminPage() {
 
         {/* Add Video Form */}
         {showAddForm && (
-          <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-            <h2 className="text-2xl font-bold mb-4">Új Videó Hozzáadása</h2>
+          <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg shadow-lg p-6 mb-6 border-2 border-purple-200">
+            <h2 className="text-2xl font-bold mb-4 text-purple-900">Új Videó Hozzáadása</h2>
             <form onSubmit={handleAddVideo} className="space-y-4">
               {/* Source Type */}
               <div>
