@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { addVideo } from '@/lib/db';
-import { calculateRatingFromViews } from '@/lib/elo';
+import { addVideo, type SourceType } from '@/lib/db';
+import { estimateRatingFromViews, calibrateFromTrainingSet } from '@/lib/calibration';
 
 /**
  * POST /api/videos
@@ -9,37 +9,57 @@ import { calculateRatingFromViews } from '@/lib/elo';
  * Body: {
  *   title: string,
  *   thumbnailText: string,
+ *   sourceType: 'own' | 'competitor' | 'test',
  *   actualViews?: number,
- *   isTest?: boolean,
- *   isCompetitor?: boolean
+ *   channelName?: string,
+ *   guestName?: string,
+ *   isTrainingSet?: boolean
  * }
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { title, thumbnailText, actualViews, isTest, isCompetitor } = body;
+    const {
+      title,
+      thumbnailText,
+      sourceType,
+      actualViews,
+      channelName,
+      guestName,
+      isTrainingSet,
+    } = body;
 
     // Validate input
-    if (!title || !thumbnailText) {
+    if (!title || !thumbnailText || !sourceType) {
       return NextResponse.json(
-        { error: 'Title and thumbnailText are required' },
+        { error: 'Title, thumbnailText, and sourceType are required' },
         { status: 400 }
       );
     }
 
-    // Calculate initial rating based on actual views (if provided)
+    if (!['own', 'competitor', 'test'].includes(sourceType)) {
+      return NextResponse.json(
+        { error: 'sourceType must be own, competitor, or test' },
+        { status: 400 }
+      );
+    }
+
+    // Calculate initial rating based on actual views (if provided) using calibration
     let initialRating = 1500; // Default rating
     if (actualViews && actualViews > 0) {
-      initialRating = calculateRatingFromViews(actualViews);
+      const calibration = await calibrateFromTrainingSet();
+      initialRating = estimateRatingFromViews(actualViews, calibration);
     }
 
     // Add video to database
     const video = await addVideo(
       title,
       thumbnailText,
+      sourceType as SourceType,
       actualViews || null,
-      isTest || false,
-      isCompetitor || false,
+      channelName || null,
+      guestName || null,
+      isTrainingSet || false,
       initialRating
     );
 

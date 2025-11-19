@@ -1,19 +1,29 @@
 import { NextResponse } from 'next/server';
 import { getAllVideosRanked, getTotalVotes } from '@/lib/db';
-import { estimateViewsFromRating, getConfidenceLevel, getPerformanceTier } from '@/lib/elo';
+import { getConfidenceLevel, getPerformanceTier } from '@/lib/elo';
+import {
+  calibrateFromTrainingSet,
+  estimateViewsFromRating,
+  getCalibrationStatus,
+} from '@/lib/calibration';
 
 /**
  * GET /api/rankings
  * Returns all videos ranked by ELO rating with performance predictions
+ * Uses channel-specific calibration for accurate view estimates
  */
 export async function GET() {
   try {
     const videos = await getAllVideosRanked();
     const totalVotes = await getTotalVotes();
 
+    // Get calibration data from training set
+    const calibration = await calibrateFromTrainingSet();
+    const calibrationStatus = getCalibrationStatus(calibration);
+
     // Enhance each video with predictions and metadata
     const rankedVideos = videos.map((video, index) => {
-      const estimatedViews = estimateViewsFromRating(video.elo_rating);
+      const estimatedViews = estimateViewsFromRating(video.elo_rating, calibration);
       const confidence = getConfidenceLevel(video.vote_count);
       const tier = getPerformanceTier(video.elo_rating);
 
@@ -32,6 +42,10 @@ export async function GET() {
       totalVotes,
       totalVideos: videos.length,
       rankings: rankedVideos,
+      calibration: {
+        ...calibration,
+        ...calibrationStatus,
+      },
     });
   } catch (error) {
     console.error('Error fetching rankings:', error);

@@ -1,5 +1,7 @@
 import { sql } from '@vercel/postgres';
 
+export type SourceType = 'own' | 'competitor' | 'test';
+
 export interface Video {
   id: number;
   title: string;
@@ -7,8 +9,10 @@ export interface Video {
   actual_views: number | null;
   elo_rating: number;
   vote_count: number;
-  is_test: boolean;
-  is_competitor: boolean;
+  source_type: SourceType;
+  channel_name: string | null;
+  guest_name: string | null;
+  is_training_set: boolean;
   created_at: Date;
 }
 
@@ -25,24 +29,30 @@ export interface Vote {
  */
 export async function initDatabase() {
   try {
-    // Create videos table
+    // Drop old table if exists (for clean migration)
+    await sql`DROP TABLE IF EXISTS votes CASCADE`;
+    await sql`DROP TABLE IF EXISTS videos CASCADE`;
+
+    // Create videos table with new schema
     await sql`
-      CREATE TABLE IF NOT EXISTS videos (
+      CREATE TABLE videos (
         id SERIAL PRIMARY KEY,
         title TEXT NOT NULL,
         thumbnail_text TEXT NOT NULL,
         actual_views INTEGER,
         elo_rating INTEGER DEFAULT 1500,
         vote_count INTEGER DEFAULT 0,
-        is_test BOOLEAN DEFAULT false,
-        is_competitor BOOLEAN DEFAULT false,
+        source_type TEXT CHECK (source_type IN ('own', 'competitor', 'test')) DEFAULT 'test',
+        channel_name TEXT,
+        guest_name TEXT,
+        is_training_set BOOLEAN DEFAULT false,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;
 
     // Create votes table
     await sql`
-      CREATE TABLE IF NOT EXISTS votes (
+      CREATE TABLE votes (
         id SERIAL PRIMARY KEY,
         winner_id INTEGER NOT NULL REFERENCES videos(id),
         loser_id INTEGER NOT NULL REFERENCES videos(id),
@@ -52,11 +62,15 @@ export async function initDatabase() {
 
     // Create indexes for better query performance
     await sql`
-      CREATE INDEX IF NOT EXISTS idx_videos_rating ON videos(elo_rating DESC)
+      CREATE INDEX idx_videos_rating ON videos(elo_rating DESC)
     `;
 
     await sql`
-      CREATE INDEX IF NOT EXISTS idx_votes_created ON votes(created_at DESC)
+      CREATE INDEX idx_videos_source ON videos(source_type)
+    `;
+
+    await sql`
+      CREATE INDEX idx_votes_created ON votes(created_at DESC)
     `;
 
     console.log('Database initialized successfully');
@@ -162,15 +176,35 @@ export async function getAllVideosRanked(): Promise<Video[]> {
 export async function addVideo(
   title: string,
   thumbnailText: string,
+  sourceType: SourceType,
   actualViews: number | null = null,
-  isTest: boolean = false,
-  isCompetitor: boolean = false,
+  channelName: string | null = null,
+  guestName: string | null = null,
+  isTrainingSet: boolean = false,
   initialRating: number = 1500
 ): Promise<Video> {
   try {
     const result = await sql<Video>`
-      INSERT INTO videos (title, thumbnail_text, actual_views, elo_rating, is_test, is_competitor)
-      VALUES (${title}, ${thumbnailText}, ${actualViews}, ${initialRating}, ${isTest}, ${isCompetitor})
+      INSERT INTO videos (
+        title,
+        thumbnail_text,
+        source_type,
+        actual_views,
+        channel_name,
+        guest_name,
+        is_training_set,
+        elo_rating
+      )
+      VALUES (
+        ${title},
+        ${thumbnailText},
+        ${sourceType},
+        ${actualViews},
+        ${channelName},
+        ${guestName},
+        ${isTrainingSet},
+        ${initialRating}
+      )
       RETURNING *
     `;
 
@@ -212,6 +246,69 @@ export async function getVideoById(id: number): Promise<Video | null> {
     return result.rows[0] || null;
   } catch (error) {
     console.error('Error getting video by ID:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get training set videos (videos with actual views for calibration)
+ */
+export async function getTrainingSetVideos(): Promise<Video[]> {
+  try {
+    const result = await sql<Video>`
+      SELECT *
+      FROM videos
+      WHERE is_training_set = true
+      AND actual_views IS NOT NULL
+      ORDER BY actual_views DESC
+    `;
+
+    return result.rows;
+  } catch (error) {
+    console.error('Error getting training set videos:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get videos by source type
+ */
+export async function getVideosBySourceType(sourceType: SourceType): Promise<Video[]> {
+  try {
+    const result = await sql<Video>`
+      SELECT *
+      FROM videos
+      WHERE source_type = ${sourceType}
+      ORDER BY elo_rating DESC
+    `;
+
+    return result.rows;
+  } catch (error) {
+    console.error('Error getting videos by source type:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get random pair from training set only (for practice mode)
+ */
+export async function getTrainingVideoPair(): Promise<[Video, Video] | null> {
+  try {
+    const result = await sql<Video>`
+      SELECT *
+      FROM videos
+      WHERE is_training_set = true
+      ORDER BY (vote_count + 1) * RANDOM()
+      LIMIT 2
+    `;
+
+    if (result.rows.length < 2) {
+      return null;
+    }
+
+    return [result.rows[0], result.rows[1]];
+  } catch (error) {
+    console.error('Error getting training video pair:', error);
     throw error;
   }
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import type { SourceType } from '@/lib/db';
 
 interface RankedVideo {
   rank: number;
@@ -10,8 +11,10 @@ interface RankedVideo {
   actual_views: number | null;
   elo_rating: number;
   vote_count: number;
-  is_test: boolean;
-  is_competitor: boolean;
+  source_type: SourceType;
+  channel_name: string | null;
+  guest_name: string | null;
+  is_training_set: boolean;
   estimatedViews: number;
   confidence: number;
   tier: string;
@@ -19,10 +22,23 @@ interface RankedVideo {
   tierDescription: string;
 }
 
+interface CalibrationInfo {
+  isCalibrated: boolean;
+  channelName: string | null;
+  trainingDataCount: number;
+  minViews: number;
+  maxViews: number;
+  confidence: number;
+  status: string;
+  message: string;
+  color: string;
+}
+
 interface RankingsData {
   totalVotes: number;
   totalVideos: number;
   rankings: RankedVideo[];
+  calibration: CalibrationInfo;
 }
 
 export default function AdminPage() {
@@ -32,11 +48,13 @@ export default function AdminPage() {
 
   // Form state
   const [formData, setFormData] = useState({
+    guestName: '',
     title: '',
     thumbnailText: '',
     actualViews: '',
-    isTest: false,
-    isCompetitor: false,
+    sourceType: 'own' as SourceType,
+    channelName: 'Bazu Podcast',
+    isTrainingSet: true,
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -66,30 +84,34 @@ export default function AdminPage() {
         body: JSON.stringify({
           title: formData.title,
           thumbnailText: formData.thumbnailText,
+          sourceType: formData.sourceType,
           actualViews: formData.actualViews ? parseInt(formData.actualViews) : null,
-          isTest: formData.isTest,
-          isCompetitor: formData.isCompetitor,
+          channelName: formData.channelName || null,
+          guestName: formData.guestName || null,
+          isTrainingSet: formData.isTrainingSet,
         }),
       });
 
       if (response.ok) {
         // Reset form
         setFormData({
+          guestName: '',
           title: '',
           thumbnailText: '',
           actualViews: '',
-          isTest: false,
-          isCompetitor: false,
+          sourceType: 'own',
+          channelName: 'Bazu Podcast',
+          isTrainingSet: true,
         });
         setShowAddForm(false);
         // Refresh rankings
         await fetchRankings();
       } else {
-        alert('Failed to add video');
+        alert('Sikertelen hozzáadás');
       }
     } catch (error) {
       console.error('Error adding video:', error);
-      alert('Network error');
+      alert('Hálózati hiba');
     } finally {
       setSubmitting(false);
     }
@@ -104,7 +126,7 @@ export default function AdminPage() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-blue-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-purple-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading rankings...</p>
+          <p className="mt-4 text-gray-600">Betöltés...</p>
         </div>
       </div>
     );
@@ -117,41 +139,69 @@ export default function AdminPage() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-4xl font-bold text-gray-900 mb-2">
-              Admin Dashboard
+              Admin Irányítópult
             </h1>
             <p className="text-gray-600">
-              View rankings and manage videos
+              Rangsor megtekintése és videók kezelése
             </p>
           </div>
           <a
             href="/"
             className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition"
           >
-            Back to Voting
+            Vissza a szavazáshoz
           </a>
         </div>
 
+        {/* Calibration Status */}
+        {data && data.calibration && (
+          <div className={`bg-white rounded-lg shadow p-6 mb-6 border-l-4 ${
+            data.calibration.status === 'excellent' ? 'border-green-500' :
+            data.calibration.status === 'good' ? 'border-blue-500' :
+            data.calibration.status === 'needs_data' ? 'border-orange-500' :
+            'border-red-500'
+          }`}>
+            <h3 className="font-bold text-lg mb-2">Kalibráció Állapota</h3>
+            <p className={`${data.calibration.color} font-medium`}>
+              {data.calibration.message}
+            </p>
+            {data.calibration.isCalibrated && (
+              <div className="mt-2 text-sm text-gray-600">
+                <p>Csatorna: <span className="font-semibold">{data.calibration.channelName}</span></p>
+                <p>Nézettség tartomány: {data.calibration.minViews.toLocaleString()} - {data.calibration.maxViews.toLocaleString()}</p>
+                <p>Megbízhatóság: {Math.round(data.calibration.confidence * 100)}%</p>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Stats */}
         {data && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             <div className="bg-white rounded-lg shadow p-6">
-              <div className="text-sm text-gray-600">Total Videos</div>
+              <div className="text-sm text-gray-600">Összes Videó</div>
               <div className="text-3xl font-bold text-purple-600">
                 {data.totalVideos}
               </div>
             </div>
             <div className="bg-white rounded-lg shadow p-6">
-              <div className="text-sm text-gray-600">Total Votes</div>
+              <div className="text-sm text-gray-600">Összes Szavazat</div>
               <div className="text-3xl font-bold text-blue-600">
                 {data.totalVotes}
               </div>
             </div>
             <div className="bg-white rounded-lg shadow p-6">
-              <div className="text-sm text-gray-600">Avg Votes per Video</div>
+              <div className="text-sm text-gray-600">Átlag Szavazat/Videó</div>
               <div className="text-3xl font-bold text-green-600">
                 {data.totalVideos > 0
                   ? Math.round((data.totalVotes * 2) / data.totalVideos)
                   : 0}
+              </div>
+            </div>
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="text-sm text-gray-600">Edzési Videók</div>
+              <div className="text-3xl font-bold text-orange-600">
+                {data.calibration?.trainingDataCount || 0}
               </div>
             </div>
           </div>
@@ -163,18 +213,76 @@ export default function AdminPage() {
             onClick={() => setShowAddForm(!showAddForm)}
             className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition"
           >
-            {showAddForm ? 'Cancel' : '+ Add New Video'}
+            {showAddForm ? 'Mégse' : '+ Új Videó Hozzáadása'}
           </button>
         </div>
 
         {/* Add Video Form */}
         {showAddForm && (
           <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-            <h2 className="text-2xl font-bold mb-4">Add New Video</h2>
+            <h2 className="text-2xl font-bold mb-4">Új Videó Hozzáadása</h2>
             <form onSubmit={handleAddVideo} className="space-y-4">
+              {/* Source Type */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Video Title
+                  Típus *
+                </label>
+                <select
+                  required
+                  value={formData.sourceType}
+                  onChange={(e) => {
+                    const sourceType = e.target.value as SourceType;
+                    setFormData({
+                      ...formData,
+                      sourceType,
+                      isTrainingSet: sourceType === 'own', // Auto-set training for own videos
+                    });
+                  }}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                >
+                  <option value="own">Saját (Bazu Podcast)</option>
+                  <option value="competitor">Versenytárs</option>
+                  <option value="test">Teszt (új packaging)</option>
+                </select>
+              </div>
+
+              {/* Guest Name (for own videos) */}
+              {formData.sourceType === 'own' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Vendég Neve *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.guestName}
+                    onChange={(e) => setFormData({ ...formData, guestName: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                    placeholder="Pl: Kapitány István"
+                  />
+                </div>
+              )}
+
+              {/* Channel Name (for competitors) */}
+              {formData.sourceType === 'competitor' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Csatorna Neve
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.channelName}
+                    onChange={(e) => setFormData({ ...formData, channelName: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                    placeholder="Pl: Konkurens Podcast"
+                  />
+                </div>
+              )}
+
+              {/* Title */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Videó Címe *
                 </label>
                 <input
                   type="text"
@@ -182,13 +290,14 @@ export default function AdminPage() {
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
-                  placeholder="How to Build a YouTube Algorithm"
+                  placeholder="Pl: Hogyan építs sikeres podcastot"
                 />
               </div>
 
+              {/* Thumbnail Text */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Thumbnail Text
+                  Thumbnail Szöveg *
                 </label>
                 <input
                   type="text"
@@ -196,51 +305,59 @@ export default function AdminPage() {
                   value={formData.thumbnailText}
                   onChange={(e) => setFormData({ ...formData, thumbnailText: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
-                  placeholder="SECRET ALGORITHM REVEALED"
+                  placeholder="Pl: PODCAST TITKOK"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  A thumbnail-on megjelenő fő szöveg (mellettük a vendég arca)
+                </p>
               </div>
 
+              {/* Actual Views */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Actual Views (optional - helps calibrate predictions)
+                  Tényleges Nézettség {formData.sourceType !== 'test' && '*'}
                 </label>
                 <input
                   type="number"
+                  required={formData.sourceType !== 'test'}
                   value={formData.actualViews}
                   onChange={(e) => setFormData({ ...formData, actualViews: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
-                  placeholder="100000"
+                  placeholder="Pl: 85000"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  {formData.sourceType === 'test'
+                    ? 'Hagyd üresen új teszt packagingnél'
+                    : 'Add meg a videó tényleges nézettségét a kalibráció pontosságához'}
+                </p>
               </div>
 
-              <div className="flex gap-4">
+              {/* Training Set Checkbox */}
+              <div>
                 <label className="flex items-center">
                   <input
                     type="checkbox"
-                    checked={formData.isTest}
-                    onChange={(e) => setFormData({ ...formData, isTest: e.target.checked })}
-                    className="mr-2"
+                    checked={formData.isTrainingSet}
+                    onChange={(e) => setFormData({ ...formData, isTrainingSet: e.target.checked })}
+                    className="mr-2 w-4 h-4"
+                    disabled={formData.sourceType === 'test'}
                   />
-                  <span className="text-sm text-gray-700">This is a test video</span>
+                  <span className="text-sm text-gray-700">
+                    Használd kalibrációhoz (edzési adathalmaz)
+                  </span>
                 </label>
-
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={formData.isCompetitor}
-                    onChange={(e) => setFormData({ ...formData, isCompetitor: e.target.checked })}
-                    className="mr-2"
-                  />
-                  <span className="text-sm text-gray-700">This is a competitor video</span>
-                </label>
+                <p className="text-xs text-gray-500 mt-1 ml-6">
+                  Ajánlott minden saját videónál, ahol ismered a nézettséget
+                </p>
               </div>
 
+              {/* Submit Button */}
               <button
                 type="submit"
                 disabled={submitting}
                 className="w-full bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition disabled:opacity-50"
               >
-                {submitting ? 'Adding...' : 'Add Video'}
+                {submitting ? 'Hozzáadás...' : 'Videó Hozzáadása'}
               </button>
             </form>
           </div>
@@ -256,28 +373,28 @@ export default function AdminPage() {
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Rank
+                      Rang
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Video
+                      Videó
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      ELO Rating
+                      ELO
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Tier
+                      Szint
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Votes
+                      Szavazatok
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Confidence
+                      Megbízhatóság
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actual Views
+                      Valós Nézettség
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Estimated Views
+                      Becsült Nézettség
                     </th>
                   </tr>
                 </thead>
@@ -290,21 +407,36 @@ export default function AdminPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4">
+                        {video.guest_name && (
+                          <div className="text-sm font-semibold text-purple-600 mb-1">
+                            🎙️ {video.guest_name}
+                          </div>
+                        )}
                         <div className="font-medium text-gray-900 mb-1">
                           {video.title}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {video.thumbnail_text}
+                          📸 {video.thumbnail_text}
                         </div>
                         <div className="flex gap-2 mt-1">
-                          {video.is_test && (
-                            <span className="inline-block bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs">
-                              Test
+                          {video.source_type === 'own' && (
+                            <span className="inline-block bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
+                              Saját
                             </span>
                           )}
-                          {video.is_competitor && (
+                          {video.source_type === 'competitor' && (
                             <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
-                              Competitor
+                              Versenytárs
+                            </span>
+                          )}
+                          {video.source_type === 'test' && (
+                            <span className="inline-block bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs">
+                              Teszt
+                            </span>
+                          )}
+                          {video.is_training_set && (
+                            <span className="inline-block bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs">
+                              Edzési
                             </span>
                           )}
                         </div>
@@ -324,12 +456,21 @@ export default function AdminPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-gray-900">{video.vote_count}</div>
+                        <div className="text-xs text-gray-500">
+                          {video.vote_count < 30 && 'Kevés'}
+                          {video.vote_count >= 30 && video.vote_count < 100 && 'Közepes'}
+                          {video.vote_count >= 100 && 'Magas'}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="w-full bg-gray-200 rounded-full h-2 mr-2">
                             <div
-                              className="bg-green-600 h-2 rounded-full"
+                              className={`h-2 rounded-full ${
+                                video.confidence >= 0.8 ? 'bg-green-600' :
+                                video.confidence >= 0.5 ? 'bg-yellow-600' :
+                                'bg-red-600'
+                              }`}
                               style={{ width: `${video.confidence * 100}%` }}
                             ></div>
                           </div>
@@ -351,6 +492,13 @@ export default function AdminPage() {
                         <div className="text-gray-900 font-medium">
                           {video.estimatedViews.toLocaleString()}
                         </div>
+                        {video.actual_views && (
+                          <div className="text-xs text-gray-500">
+                            {Math.abs(video.estimatedViews - video.actual_views) / video.actual_views > 0.2
+                              ? '⚠️ Nagy eltérés'
+                              : '✓ Jó becslés'}
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -361,18 +509,135 @@ export default function AdminPage() {
         </div>
       )}
 
+      {/* Test Video Insights */}
+      {data && data.rankings.filter(v => v.source_type === 'test').length > 0 && (
+        <div className="max-w-7xl mx-auto mt-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            🧪 Teszt Videók Teljesítménye
+          </h2>
+          <div className="grid gap-4">
+            {data.rankings
+              .filter(v => v.source_type === 'test')
+              .map((testVideo) => {
+                // Find surrounding training videos
+                const trainingVideos = data.rankings.filter(v => v.is_training_set && v.actual_views);
+                const above = trainingVideos.filter(v => v.rank < testVideo.rank).slice(-1)[0];
+                const below = trainingVideos.filter(v => v.rank > testVideo.rank)[0];
+
+                return (
+                  <div key={testVideo.id} className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-yellow-500">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1">
+                        <h3 className="text-xl font-bold text-gray-900 mb-1">
+                          {testVideo.title}
+                        </h3>
+                        <p className="text-gray-600">
+                          📸 {testVideo.thumbnail_text}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-purple-600">
+                          #{testVideo.rank}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {data.rankings.length} videóból
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-4 mb-4">
+                      <div className="bg-purple-50 rounded-lg p-4 text-center">
+                        <div className="text-sm text-gray-600 mb-1">ELO Értékelés</div>
+                        <div className="text-2xl font-bold text-purple-600">
+                          {testVideo.elo_rating}
+                        </div>
+                      </div>
+                      <div className="bg-blue-50 rounded-lg p-4 text-center">
+                        <div className="text-sm text-gray-600 mb-1">Becsült Nézettség</div>
+                        <div className="text-2xl font-bold text-blue-600">
+                          {testVideo.estimatedViews.toLocaleString()}
+                        </div>
+                      </div>
+                      <div className="bg-green-50 rounded-lg p-4 text-center">
+                        <div className="text-sm text-gray-600 mb-1">Megbízhatóság</div>
+                        <div className="text-2xl font-bold text-green-600">
+                          {Math.round(testVideo.confidence * 100)}%
+                        </div>
+                        {testVideo.vote_count < 50 && (
+                          <div className="text-xs text-orange-600 mt-1">
+                            Még {50 - testVideo.vote_count} szavazat kell
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Benchmark Comparison */}
+                    {(above || below) && (
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <h4 className="font-semibold text-gray-700 mb-3">
+                          📊 Összehasonlítás a valós epizódokkal:
+                        </h4>
+                        <div className="space-y-2">
+                          {above && (
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-gray-600">
+                                ⬆️ Jobb mint: <span className="font-semibold">{above.guest_name || above.title}</span>
+                              </span>
+                              <span className="text-green-600 font-semibold">
+                                {above.actual_views?.toLocaleString()} nézés
+                              </span>
+                            </div>
+                          )}
+                          {below && (
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-gray-600">
+                                ⬇️ Gyengébb mint: <span className="font-semibold">{below.guest_name || below.title}</span>
+                              </span>
+                              <span className="text-red-600 font-semibold">
+                                {below.actual_views?.toLocaleString()} nézés
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {data.calibration.isCalibrated && (
+                          <div className="mt-3 pt-3 border-t border-gray-200">
+                            <p className="text-sm text-gray-600">
+                              <strong>Becslés:</strong> Ez a packaging valószínűleg{' '}
+                              <span className="text-purple-600 font-semibold">
+                                {testVideo.estimatedViews.toLocaleString()}
+                              </span>{' '}
+                              megtekintést fog kapni
+                              {above && below && (
+                                <>
+                                  {' '}({above.actual_views!.toLocaleString()} és {below.actual_views!.toLocaleString()} között)
+                                </>
+                              )}
+                              .
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      )}
+
       {/* No videos message */}
       {data && data.rankings.length === 0 && (
         <div className="max-w-7xl mx-auto text-center">
           <div className="bg-white rounded-lg shadow-lg p-12">
             <p className="text-gray-600 text-lg mb-4">
-              No videos yet. Add some videos to get started!
+              Még nincsenek videók. Add hozzá a Bazu podcast epizódjaidat!
             </p>
             <button
               onClick={() => setShowAddForm(true)}
               className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition"
             >
-              Add Your First Video
+              Első Videó Hozzáadása
             </button>
           </div>
         </div>

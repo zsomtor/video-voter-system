@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Video Voter - Test Your YouTube Packaging',
-  description: 'Vote on YouTube video titles and thumbnails to predict performance',
+  title: 'Bazu Podcast - Videó Szavazó',
+  description: 'Szavazz YouTube videó címekre és thumbnailekre a teljesítmény előrejelzéséhez',
 }
 
 export default function RootLayout({
@@ -12,7 +12,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="hu">
       <body>{children}</body>
     </html>
   )
