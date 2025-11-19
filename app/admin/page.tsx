@@ -359,18 +359,17 @@ export default function AdminPage() {
               {/* Thumbnail Text */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Thumbnail Szöveg *
+                  Thumbnail Szöveg (Opcionális)
                 </label>
                 <input
                   type="text"
-                  required
                   value={formData.thumbnailText}
                   onChange={(e) => setFormData({ ...formData, thumbnailText: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
                   placeholder="Pl: PODCAST TITKOK"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  A thumbnail-on megjelenő fő szöveg (mellettük a vendég arca)
+                  A thumbnail-on megjelenő fő szöveg. Ha képet töltesz fel, ez opcionális.
                 </p>
               </div>
 

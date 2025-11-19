@@ -32,12 +32,15 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Validate input
-    if (!title || !thumbnailText || !sourceType) {
+    if (!title || !sourceType) {
       return NextResponse.json(
-        { error: 'Title, thumbnailText, and sourceType are required' },
+        { error: 'Title and sourceType are required' },
         { status: 400 }
       );
     }
+
+    // Use empty string as default for thumbnailText if not provided
+    const finalThumbnailText = thumbnailText || '';
 
     if (!['own', 'competitor', 'test'].includes(sourceType)) {
       return NextResponse.json(
@@ -56,7 +59,7 @@ export async function POST(request: NextRequest) {
     // Add video to database
     const video = await addVideo(
       title,
-      thumbnailText,
+      finalThumbnailText,
       sourceType as SourceType,
       actualViews || null,
       channelName || null,
