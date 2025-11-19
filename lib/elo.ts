@@ -76,13 +76,14 @@ export function calculateRatingFromViews(views: number): number {
 }
 
 /**
- * Estimate view count from ELO rating
+ * Estimate view count from ELO rating (DEPRECATED - use calibration.ts)
  * Inverse of calculateRatingFromViews
+ * This is the generic fallback formula
  *
  * @param rating - ELO rating
  * @returns Estimated view count
  */
-export function estimateViewsFromRating(rating: number): number {
+export function estimateViewsFromRatingGeneric(rating: number): number {
   // Inverse of the rating formula
   const baseViews = 10000;
   const views = baseViews * Math.pow(10, (rating - DEFAULT_RATING) / 400);

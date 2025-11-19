@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Video } from '@/lib/db';
+import type { Video } from '@/lib/db';
 
 export default function VotingPage() {
   const [videoA, setVideoA] = useState<Video | null>(null);

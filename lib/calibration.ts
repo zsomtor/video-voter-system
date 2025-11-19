@@ -100,7 +100,8 @@ export function estimateViewsFromRating(
   if (!calibration.isCalibrated || calibration.trainingDataCount === 0) {
     // Fallback to generic formula if not calibrated
     const baseViews = 10000;
-    const views = baseViews * Math.pow(10, (rating - 1500) / 400);
+    const DEFAULT_RATING = 1500;
+    const views = baseViews * Math.pow(10, (rating - DEFAULT_RATING) / 400);
     return Math.round(views);
   }
 
@@ -122,10 +123,11 @@ export function estimateRatingFromViews(
   views: number,
   calibration: CalibrationData
 ): number {
-  if (!calibration.isCalibrated || calibration.trainingDataCount === 0) {
+  if (!calibration.isCalibrated || calibration.trainingDataCount === 0 || views <= 0) {
     // Fallback to generic formula
     const baseViews = 10000;
-    const rating = 1500 + 400 * Math.log10(views / baseViews);
+    const DEFAULT_RATING = 1500;
+    const rating = DEFAULT_RATING + 400 * Math.log10(Math.max(views, 1) / baseViews);
     return Math.round(Math.max(rating, 800));
   }
 
@@ -133,7 +135,7 @@ export function estimateRatingFromViews(
   const logViews = Math.log10(views);
   const rating = (logViews - calibration.intercept) / calibration.slope;
 
-  return Math.round(rating);
+  return Math.round(Math.max(rating, 800));
 }
 
 /**
