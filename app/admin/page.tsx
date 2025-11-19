@@ -62,6 +62,7 @@ export default function AdminPage() {
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState<number | null>(null);
 
   // Fetch rankings
   const fetchRankings = async () => {
@@ -149,6 +150,32 @@ export default function AdminPage() {
     } finally {
       setSubmitting(false);
       setUploading(false);
+    }
+  };
+
+  // Delete video
+  const handleDeleteVideo = async (videoId: number) => {
+    if (!confirm('Biztosan törölni akarod ezt a videót?')) {
+      return;
+    }
+
+    setDeleting(videoId);
+    try {
+      const response = await fetch(`/api/videos/${videoId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        // Refresh rankings
+        await fetchRankings();
+      } else {
+        alert('Sikertelen törlés');
+      }
+    } catch (error) {
+      console.error('Error deleting video:', error);
+      alert('Hálózati hiba');
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -483,6 +510,9 @@ export default function AdminPage() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Becsült Nézettség
                     </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Műveletek
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -608,6 +638,15 @@ export default function AdminPage() {
                               : '✓ Jó becslés'}
                           </div>
                         )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <button
+                          onClick={() => handleDeleteVideo(video.id)}
+                          disabled={deleting === video.id}
+                          className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition disabled:opacity-50 text-sm"
+                        >
+                          {deleting === video.id ? 'Törlés...' : '🗑️ Törlés'}
+                        </button>
                       </td>
                     </tr>
                   ))}
