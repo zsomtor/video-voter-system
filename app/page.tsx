@@ -196,13 +196,8 @@ export default function VotingPage() {
                   {videoA.title}
                 </h3>
 
-                {/* Metadata */}
+                {/* Metadata - NO VIEW COUNT to avoid bias */}
                 <div className="text-sm text-gray-500 text-center">
-                  {videoA.actual_views && (
-                    <span className="inline-block bg-gray-100 px-3 py-1 rounded-full mr-2">
-                      {videoA.actual_views.toLocaleString()} megtekintés
-                    </span>
-                  )}
                   {videoA.source_type === 'test' && (
                     <span className="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full">
                       Teszt
@@ -277,13 +272,8 @@ export default function VotingPage() {
                   {videoB.title}
                 </h3>
 
-                {/* Metadata */}
+                {/* Metadata - NO VIEW COUNT to avoid bias */}
                 <div className="text-sm text-gray-500 text-center">
-                  {videoB.actual_views && (
-                    <span className="inline-block bg-gray-100 px-3 py-1 rounded-full mr-2">
-                      {videoB.actual_views.toLocaleString()} megtekintés
-                    </span>
-                  )}
                   {videoB.source_type === 'test' && (
                     <span className="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full">
                       Teszt
