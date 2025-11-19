@@ -110,6 +110,31 @@ export async function getRandomVideoPair(): Promise<[Video, Video] | null> {
 }
 
 /**
+ * Get two random videos from Bazu Podcast only
+ * For internal Bazu ranking
+ */
+export async function getBazuOnlyVideoPair(): Promise<[Video, Video] | null> {
+  try {
+    const result = await sql<Video>`
+      SELECT *
+      FROM videos
+      WHERE channel_name = 'Bazu Podcast'
+      ORDER BY (vote_count + 1) * RANDOM()
+      LIMIT 2
+    `;
+
+    if (result.rows.length < 2) {
+      return null;
+    }
+
+    return [result.rows[0], result.rows[1]];
+  } catch (error) {
+    console.error('Error getting Bazu-only video pair:', error);
+    throw error;
+  }
+}
+
+/**
  * Record a vote and update ELO ratings
  */
 export async function recordVote(

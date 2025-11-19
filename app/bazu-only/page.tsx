@@ -6,7 +6,7 @@ import type { Video } from '@/lib/db';
 
 const MAX_VOTES = 15;
 
-export default function VotingPage() {
+export default function BazuOnlyVotingPage() {
   const [videoA, setVideoA] = useState<Video | null>(null);
   const [videoB, setVideoB] = useState<Video | null>(null);
   const [loading, setLoading] = useState(true);
@@ -15,13 +15,13 @@ export default function VotingPage() {
   const [error, setError] = useState<string | null>(null);
   const [isComplete, setIsComplete] = useState(false);
 
-  // Fetch a new pair of videos
+  // Fetch a new pair of Bazu-only videos
   const fetchNewPair = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await fetch('/api/pair');
+      const response = await fetch('/api/bazu-pair');
       const data = await response.json();
 
       if (!response.ok) {
@@ -61,7 +61,7 @@ export default function VotingPage() {
       setTotalVotes(newVoteCount);
 
       // Save to localStorage
-      localStorage.setItem('votingSessionCount', newVoteCount.toString());
+      localStorage.setItem('bazuOnlySessionCount', newVoteCount.toString());
 
       // Check if we've reached the limit
       if (newVoteCount >= MAX_VOTES) {
@@ -82,14 +82,14 @@ export default function VotingPage() {
   const handleNewRound = () => {
     setTotalVotes(0);
     setIsComplete(false);
-    localStorage.setItem('votingSessionCount', '0');
+    localStorage.setItem('bazuOnlySessionCount', '0');
     fetchNewPair();
   };
 
   // Load initial pair and session state on mount
   useEffect(() => {
     // Load session count from localStorage
-    const savedCount = localStorage.getItem('votingSessionCount');
+    const savedCount = localStorage.getItem('bazuOnlySessionCount');
     if (savedCount) {
       const count = parseInt(savedCount, 10);
       setTotalVotes(count);
@@ -105,9 +105,9 @@ export default function VotingPage() {
 
   if (loading && !videoA) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-blue-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-purple-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Betöltés...</p>
         </div>
       </div>
@@ -116,17 +116,17 @@ export default function VotingPage() {
 
   if (error && !videoA) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-blue-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50">
         <div className="text-center max-w-md mx-auto p-8">
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
             {error}
           </div>
           <p className="text-gray-600 mb-4">
-            Győződj meg róla, hogy az adatbázis inicializálva van és vannak videók.
+            A Csak Bazu módhoz adj hozzá legalább 2 Bazu Podcast videót!
           </p>
           <a
             href="/admin"
-            className="inline-block bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition"
+            className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition"
           >
             Admin Irányítópult
           </a>
@@ -138,7 +138,7 @@ export default function VotingPage() {
   // Completion screen
   if (isComplete) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex items-center justify-center py-8 px-4">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center py-8 px-4">
         <div className="max-w-2xl mx-auto text-center">
           <div className="bg-white rounded-2xl shadow-2xl p-12">
             <div className="text-7xl mb-6">🎉</div>
@@ -146,26 +146,26 @@ export default function VotingPage() {
               Köszönjük!
             </h1>
             <p className="text-xl text-gray-700 mb-6">
-              Leadtál <span className="font-bold text-purple-600">{MAX_VOTES} szavazatot</span>!
+              Leadtál <span className="font-bold text-blue-600">{MAX_VOTES} szavazatot</span> a Bazu belső rangsoron!
             </p>
             <p className="text-gray-600 mb-8">
-              A szavazataid segítenek pontosabb előrejelzéseket készíteni a videó packagingek teljesítményéről.
+              A szavazataid segítenek pontosabb Bazu belső rangsort építeni.
             </p>
 
             <div className="space-y-4">
               <button
                 onClick={handleNewRound}
-                className="w-full bg-purple-600 text-white px-8 py-4 rounded-lg hover:bg-purple-700 transition text-lg font-semibold"
+                className="w-full bg-blue-600 text-white px-8 py-4 rounded-lg hover:bg-blue-700 transition text-lg font-semibold"
               >
                 🔄 Új Kör Indítása
               </button>
 
               <div className="flex gap-4">
                 <a
-                  href="/bazu-only"
-                  className="flex-1 bg-blue-100 text-blue-800 px-6 py-3 rounded-lg hover:bg-blue-200 transition font-semibold"
+                  href="/"
+                  className="flex-1 bg-purple-100 text-purple-800 px-6 py-3 rounded-lg hover:bg-purple-200 transition font-semibold"
                 >
-                  🎯 Csak Bazu Szavazás
+                  🌍 Vegyes Szavazás
                 </a>
                 <a
                   href="/admin"
@@ -182,15 +182,15 @@ export default function VotingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 py-8 px-4">
       {/* Header */}
       <div className="max-w-6xl mx-auto mb-8">
         <div className="text-center mb-4">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            Magyar Podcast Packaging Szavazó
+            🎯 Csak Bazu - Belső Rangsor
           </h1>
           <p className="text-gray-600 text-lg">
-            Melyik videóra kattintanál inkább?
+            Melyik Bazu videóra kattintanál inkább?
           </p>
         </div>
 
@@ -198,11 +198,11 @@ export default function VotingPage() {
         <div className="max-w-md mx-auto mb-6">
           <div className="flex justify-between text-sm text-gray-600 mb-2">
             <span>Haladás</span>
-            <span className="font-semibold text-purple-600">{totalVotes}/{MAX_VOTES}</span>
+            <span className="font-semibold text-blue-600">{totalVotes}/{MAX_VOTES}</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-3">
             <div
-              className="bg-gradient-to-r from-purple-500 to-blue-500 h-3 rounded-full transition-all duration-300"
+              className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all duration-300"
               style={{ width: `${(totalVotes / MAX_VOTES) * 100}%` }}
             ></div>
           </div>
@@ -211,10 +211,10 @@ export default function VotingPage() {
         {/* Stats Bar */}
         <div className="flex items-center justify-center gap-4 text-sm text-gray-600 flex-wrap">
           <a
-            href="/bazu-only"
+            href="/"
             className="bg-white px-4 py-2 rounded-full shadow hover:shadow-md transition"
           >
-            🎯 Csak Bazu
+            🌍 Vegyes Szavazás
           </a>
           <a
             href="/practice"
@@ -241,7 +241,7 @@ export default function VotingPage() {
               disabled={voting}
               className="group relative bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed p-8"
             >
-              <div className="absolute top-4 left-4 bg-purple-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
+              <div className="absolute top-4 left-4 bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
                 A
               </div>
 
@@ -249,7 +249,7 @@ export default function VotingPage() {
                 {/* Guest Name */}
                 {videoA.guest_name && (
                   <div className="text-center mb-4">
-                    <span className="inline-block bg-purple-100 text-purple-800 px-4 py-2 rounded-full text-sm font-semibold">
+                    <span className="inline-block bg-blue-100 text-blue-800 px-4 py-2 rounded-full text-sm font-semibold">
                       🎙️ {videoA.guest_name}
                     </span>
                   </div>
@@ -275,7 +275,7 @@ export default function VotingPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="bg-gradient-to-br from-purple-100 to-blue-100 rounded-lg p-12">
+                    <div className="bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg p-12">
                       <div className="text-center">
                         <div className="text-6xl mb-4">🎬</div>
                         <div className="text-2xl font-bold text-gray-800">
@@ -290,23 +290,9 @@ export default function VotingPage() {
                 <h3 className="text-xl font-semibold text-gray-900 text-center mb-2">
                   {videoA.title}
                 </h3>
-
-                {/* Metadata - NO VIEW COUNT to avoid bias */}
-                <div className="text-sm text-gray-500 text-center">
-                  {videoA.source_type === 'test' && (
-                    <span className="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full">
-                      Teszt
-                    </span>
-                  )}
-                  {videoA.source_type === 'competitor' && (
-                    <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
-                      Versenytárs
-                    </span>
-                  )}
-                </div>
               </div>
 
-              <div className="text-purple-600 font-semibold group-hover:text-purple-700">
+              <div className="text-blue-600 font-semibold group-hover:text-blue-700">
                 Kattints az A-ra szavazáshoz
               </div>
             </button>
@@ -317,7 +303,7 @@ export default function VotingPage() {
               disabled={voting}
               className="group relative bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed p-8"
             >
-              <div className="absolute top-4 left-4 bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
+              <div className="absolute top-4 left-4 bg-purple-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
                 B
               </div>
 
@@ -325,7 +311,7 @@ export default function VotingPage() {
                 {/* Guest Name */}
                 {videoB.guest_name && (
                   <div className="text-center mb-4">
-                    <span className="inline-block bg-blue-100 text-blue-800 px-4 py-2 rounded-full text-sm font-semibold">
+                    <span className="inline-block bg-purple-100 text-purple-800 px-4 py-2 rounded-full text-sm font-semibold">
                       🎙️ {videoB.guest_name}
                     </span>
                   </div>
@@ -351,7 +337,7 @@ export default function VotingPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg p-12">
+                    <div className="bg-gradient-to-br from-purple-100 to-blue-100 rounded-lg p-12">
                       <div className="text-center">
                         <div className="text-6xl mb-4">🎬</div>
                         <div className="text-2xl font-bold text-gray-800">
@@ -366,23 +352,9 @@ export default function VotingPage() {
                 <h3 className="text-xl font-semibold text-gray-900 text-center mb-2">
                   {videoB.title}
                 </h3>
-
-                {/* Metadata - NO VIEW COUNT to avoid bias */}
-                <div className="text-sm text-gray-500 text-center">
-                  {videoB.source_type === 'test' && (
-                    <span className="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full">
-                      Teszt
-                    </span>
-                  )}
-                  {videoB.source_type === 'competitor' && (
-                    <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
-                      Versenytárs
-                    </span>
-                  )}
-                </div>
               </div>
 
-              <div className="text-blue-600 font-semibold group-hover:text-blue-700">
+              <div className="text-purple-600 font-semibold group-hover:text-purple-700">
                 Kattints a B-re szavazáshoz
               </div>
             </button>
@@ -391,7 +363,7 @@ export default function VotingPage() {
           {/* Loading indicator during vote */}
           {voting && (
             <div className="text-center mt-6">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
               <p className="text-gray-600 mt-2">Szavazat rögzítése...</p>
             </div>
           )}
@@ -401,8 +373,8 @@ export default function VotingPage() {
       {/* Instructions */}
       <div className="max-w-2xl mx-auto mt-12 text-center text-gray-600 text-sm">
         <p>
-          Szavazz arra, hogy melyik videóra kattintanál inkább.
-          A szavazataid segítenek megjósolni, hogy a különböző videó packagingek milyen teljesítményt nyújtanak.
+          Szavazz arra, hogy melyik Bazu videóra kattintanál inkább.
+          Ezek a szavazatok építik a Bazu belső packaging rangsort.
         </p>
       </div>
     </div>
