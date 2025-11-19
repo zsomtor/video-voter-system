@@ -73,7 +73,11 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error adding video:', error);
     return NextResponse.json(
-      { error: 'Failed to add video' },
+      {
+        error: 'Failed to add video',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      },
       { status: 500 }
     );
   }
