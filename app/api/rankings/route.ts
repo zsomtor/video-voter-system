@@ -7,6 +7,10 @@ import {
   getCalibrationStatus,
 } from '@/lib/calibration';
 
+// Disable caching for this route
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 /**
  * GET /api/rankings
  * Returns all videos ranked by ELO rating with performance predictions

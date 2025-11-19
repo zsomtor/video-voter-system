@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getRandomVideoPair } from '@/lib/db';
 
+// Disable caching for this route
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 /**
  * GET /api/pair
  * Returns two random videos for comparison

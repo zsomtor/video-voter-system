@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getTrainingVideoPair } from '@/lib/db';
 
+// Disable caching for this route
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 /**
  * GET /api/practice-pair
  * Returns two random videos from training set for practice mode
