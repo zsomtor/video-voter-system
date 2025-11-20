@@ -124,12 +124,6 @@ export default function BazuOnlyVotingPage() {
           <p className="text-gray-600 mb-4">
             A Csak Bazu módhoz adj hozzá legalább 2 Bazu Podcast videót!
           </p>
-          <a
-            href="/admin"
-            className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition"
-          >
-            Admin Irányítópult
-          </a>
         </div>
       </div>
     );
@@ -160,20 +154,12 @@ export default function BazuOnlyVotingPage() {
                 🔄 Új Kör Indítása
               </button>
 
-              <div className="flex gap-4">
-                <a
-                  href="/"
-                  className="flex-1 bg-purple-100 text-purple-800 px-6 py-3 rounded-lg hover:bg-purple-200 transition font-semibold"
-                >
-                  🌍 Vegyes Szavazás
-                </a>
-                <a
-                  href="/admin"
-                  className="flex-1 bg-gray-100 text-gray-800 px-6 py-3 rounded-lg hover:bg-gray-200 transition font-semibold"
-                >
-                  📊 Rangsor
-                </a>
-              </div>
+              <a
+                href="/"
+                className="w-full bg-purple-100 text-purple-800 px-6 py-3 rounded-lg hover:bg-purple-200 transition font-semibold"
+              >
+                🌍 Vegyes Szavazás
+              </a>
             </div>
           </div>
         </div>
@@ -221,12 +207,6 @@ export default function BazuOnlyVotingPage() {
             className="bg-white px-4 py-2 rounded-full shadow hover:shadow-md transition"
           >
             📚 Gyakorló mód
-          </a>
-          <a
-            href="/admin"
-            className="bg-white px-4 py-2 rounded-full shadow hover:shadow-md transition"
-          >
-            📊 Rangsor
           </a>
         </div>
       </div>

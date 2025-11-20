@@ -93,12 +93,6 @@ export default function PracticePage() {
           <p className="text-gray-600 mb-4">
             A gyakorló módhoz adj hozzá legalább 2 saját videót ismert nézettséggel!
           </p>
-          <a
-            href="/admin"
-            className="inline-block bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition"
-          >
-            Admin Irányítópult
-          </a>
         </div>
       </div>
     );
@@ -127,12 +121,6 @@ export default function PracticePage() {
             className="bg-white px-4 py-2 rounded-full shadow hover:shadow-md transition"
           >
             🗳️ Éles szavazás
-          </a>
-          <a
-            href="/admin"
-            className="bg-white px-4 py-2 rounded-full shadow hover:shadow-md transition"
-          >
-            📊 Rangsor
           </a>
         </div>
 

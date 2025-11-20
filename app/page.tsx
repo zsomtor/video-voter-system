@@ -124,12 +124,6 @@ export default function VotingPage() {
           <p className="text-gray-600 mb-4">
             Győződj meg róla, hogy az adatbázis inicializálva van és vannak videók.
           </p>
-          <a
-            href="/admin"
-            className="inline-block bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition"
-          >
-            Admin Irányítópult
-          </a>
         </div>
       </div>
     );
@@ -160,20 +154,12 @@ export default function VotingPage() {
                 🔄 Új Kör Indítása
               </button>
 
-              <div className="flex gap-4">
-                <a
-                  href="/bazu-only"
-                  className="flex-1 bg-blue-100 text-blue-800 px-6 py-3 rounded-lg hover:bg-blue-200 transition font-semibold"
-                >
-                  🎯 Csak Bazu Szavazás
-                </a>
-                <a
-                  href="/admin"
-                  className="flex-1 bg-gray-100 text-gray-800 px-6 py-3 rounded-lg hover:bg-gray-200 transition font-semibold"
-                >
-                  📊 Rangsor
-                </a>
-              </div>
+              <a
+                href="/bazu-only"
+                className="w-full bg-blue-100 text-blue-800 px-6 py-3 rounded-lg hover:bg-blue-200 transition font-semibold"
+              >
+                🎯 Csak Bazu Szavazás
+              </a>
             </div>
           </div>
         </div>
@@ -221,12 +207,6 @@ export default function VotingPage() {
             className="bg-white px-4 py-2 rounded-full shadow hover:shadow-md transition"
           >
             📚 Gyakorló mód
-          </a>
-          <a
-            href="/admin"
-            className="bg-white px-4 py-2 rounded-full shadow hover:shadow-md transition"
-          >
-            📊 Rangsor
           </a>
         </div>
       </div>
