@@ -282,6 +282,7 @@ export async function getVideoById(id: number): Promise<Video | null> {
 
 /**
  * Get training set videos (videos with actual views for calibration)
+ * Only returns Bazu Podcast videos for channel-specific calibration
  */
 export async function getTrainingSetVideos(): Promise<Video[]> {
   try {
@@ -290,6 +291,7 @@ export async function getTrainingSetVideos(): Promise<Video[]> {
       FROM videos
       WHERE is_training_set = true
       AND actual_views IS NOT NULL
+      AND channel_name = 'Bazu Podcast'
       ORDER BY actual_views DESC
     `;
 
