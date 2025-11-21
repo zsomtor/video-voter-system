@@ -270,20 +270,6 @@ export default function VotingPage() {
                 <h3 className="text-xl font-semibold text-gray-900 text-center mb-2">
                   {videoA.title}
                 </h3>
-
-                {/* Metadata - NO VIEW COUNT to avoid bias */}
-                <div className="text-sm text-gray-500 text-center">
-                  {videoA.source_type === 'test' && (
-                    <span className="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full">
-                      Teszt
-                    </span>
-                  )}
-                  {videoA.source_type === 'competitor' && (
-                    <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
-                      Versenytárs
-                    </span>
-                  )}
-                </div>
               </div>
 
               <div className="text-purple-600 font-semibold group-hover:text-purple-700">
@@ -346,20 +332,6 @@ export default function VotingPage() {
                 <h3 className="text-xl font-semibold text-gray-900 text-center mb-2">
                   {videoB.title}
                 </h3>
-
-                {/* Metadata - NO VIEW COUNT to avoid bias */}
-                <div className="text-sm text-gray-500 text-center">
-                  {videoB.source_type === 'test' && (
-                    <span className="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full">
-                      Teszt
-                    </span>
-                  )}
-                  {videoB.source_type === 'competitor' && (
-                    <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
-                      Versenytárs
-                    </span>
-                  )}
-                </div>
               </div>
 
               <div className="text-blue-600 font-semibold group-hover:text-blue-700">
