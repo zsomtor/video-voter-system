@@ -58,19 +58,26 @@ export async function POST(request: NextRequest) {
       const calibration = await calibrateFromTrainingSet();
       initialRating = estimateRatingFromViews(actualViews, calibration);
     } else {
-      // For new test videos without actual views, start from the current average ELO
-      // This ensures they start in a realistic position
+      // For new test videos without actual views, start between the worst and average
+      // This ensures they start in a realistic but conservative position
       try {
-        const avgResult = await sql`
-          SELECT AVG(elo_rating)::integer as avg_rating, COUNT(*) as count
+        const statsResult = await sql`
+          SELECT
+            AVG(elo_rating)::integer as avg_rating,
+            MIN(elo_rating)::integer as min_rating,
+            COUNT(*) as count
           FROM videos
         `;
 
-        if (avgResult.rows[0].count > 0 && avgResult.rows[0].avg_rating) {
-          initialRating = avgResult.rows[0].avg_rating;
+        if (statsResult.rows[0].count > 0) {
+          const avgRating = statsResult.rows[0].avg_rating || 1500;
+          const minRating = statsResult.rows[0].min_rating || 1500;
+
+          // Start halfway between worst and average
+          initialRating = Math.round((minRating + avgRating) / 2);
         }
       } catch (error) {
-        console.log('Could not get average rating, using default 1500');
+        console.log('Could not get rating stats, using default 1500');
         // Keep default 1500 if query fails
       }
     }
