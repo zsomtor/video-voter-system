@@ -308,21 +308,51 @@ export default function AdminPage() {
 
         {/* Calibration Status */}
         {data && data.calibration && (
-          <div className={`bg-white rounded-lg shadow p-6 mb-6 border-l-4 ${
+          <div className={`bg-white rounded-lg shadow-lg p-6 mb-6 border-l-4 ${
             data.calibration.status === 'excellent' ? 'border-green-500' :
             data.calibration.status === 'good' ? 'border-blue-500' :
             data.calibration.status === 'needs_data' ? 'border-orange-500' :
             'border-red-500'
           }`}>
-            <h3 className="font-bold text-lg mb-2">Kalibráció Állapota</h3>
-            <p className={`${data.calibration.color} font-medium`}>
-              {data.calibration.message}
-            </p>
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <h3 className="font-bold text-xl mb-3 flex items-center gap-2">
+                  🎯 Kalibráció Állapota
+                  {data.calibration.isCalibrated && (
+                    <span className="text-sm bg-purple-100 text-purple-800 px-3 py-1 rounded-full">
+                      A rendszer tanul! 🧠
+                    </span>
+                  )}
+                </h3>
+                <p className={`${data.calibration.color} font-medium text-lg mb-3`}>
+                  {data.calibration.message}
+                </p>
+                {data.calibration.isCalibrated && (
+                  <div className="grid grid-cols-3 gap-4 mt-4 text-sm">
+                    <div className="bg-gray-50 rounded p-3">
+                      <div className="text-gray-600 text-xs">Csatorna</div>
+                      <div className="font-semibold text-gray-900">{data.calibration.channelName}</div>
+                    </div>
+                    <div className="bg-gray-50 rounded p-3">
+                      <div className="text-gray-600 text-xs">Nézettség tartomány</div>
+                      <div className="font-semibold text-gray-900">
+                        {data.calibration.minViews.toLocaleString()} - {data.calibration.maxViews.toLocaleString()}
+                      </div>
+                    </div>
+                    <div className="bg-gray-50 rounded p-3">
+                      <div className="text-gray-600 text-xs">Megbízhatóság</div>
+                      <div className="font-semibold text-gray-900">{Math.round(data.calibration.confidence * 100)}%</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
             {data.calibration.isCalibrated && (
-              <div className="mt-2 text-sm text-gray-600">
-                <p>Csatorna: <span className="font-semibold">{data.calibration.channelName}</span></p>
-                <p>Nézettség tartomány: {data.calibration.minViews.toLocaleString()} - {data.calibration.maxViews.toLocaleString()}</p>
-                <p>Megbízhatóság: {Math.round(data.calibration.confidence * 100)}%</p>
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <p className="text-sm text-gray-600">
+                  💡 <strong>Hogyan tanul a rendszer:</strong> Minden "Edzési" videó (ahol van Valós Nézettség)
+                  segít kalibrálni az ELO → Nézettség becslést. Minél több edzési videót adsz hozzá, annál pontosabb lesz!
+                </p>
               </div>
             )}
           </div>
@@ -959,11 +989,31 @@ export default function AdminPage() {
                           {video.estimatedViews.toLocaleString()}
                         </div>
                         {video.actual_views && (
-                          <div className="text-xs text-gray-500">
-                            {Math.abs(video.estimatedViews - video.actual_views) / video.actual_views > 0.2
-                              ? '⚠️ Nagy eltérés'
-                              : '✓ Jó becslés'}
-                          </div>
+                          (() => {
+                            const accuracy = 100 - Math.abs((video.estimatedViews - video.actual_views) / video.actual_views * 100);
+                            const clampedAccuracy = Math.max(0, Math.min(100, accuracy));
+                            return (
+                              <div className="mt-1">
+                                <div className="text-xs font-semibold mb-1" style={{
+                                  color: clampedAccuracy >= 80 ? '#10b981' :
+                                         clampedAccuracy >= 60 ? '#f59e0b' :
+                                         '#ef4444'
+                                }}>
+                                  {clampedAccuracy >= 80 ? '✓' : clampedAccuracy >= 60 ? '⚠️' : '✗'} {clampedAccuracy.toFixed(0)}% pontos
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                  <div
+                                    className={`h-1.5 rounded-full ${
+                                      clampedAccuracy >= 80 ? 'bg-green-500' :
+                                      clampedAccuracy >= 60 ? 'bg-yellow-500' :
+                                      'bg-red-500'
+                                    }`}
+                                    style={{ width: `${clampedAccuracy}%` }}
+                                  ></div>
+                                </div>
+                              </div>
+                            );
+                          })()
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
