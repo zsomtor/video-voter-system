@@ -984,6 +984,11 @@ export default function AdminPage() {
                                   Edzési
                                 </span>
                               )}
+                              {video.test_group_id && (
+                                <span className="inline-block bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs font-semibold">
+                                  🧪 {video.test_group_id}
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
