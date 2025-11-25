@@ -47,6 +47,7 @@ export default function AdminPage() {
   const [data, setData] = useState<RankingsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingVideo, setEditingVideo] = useState<RankedVideo | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -201,6 +202,74 @@ export default function AdminPage() {
     }
   };
 
+  // Edit video - open edit modal
+  const handleEditClick = (video: RankedVideo) => {
+    setEditingVideo(video);
+    setFormData({
+      title: video.title,
+      thumbnailText: video.thumbnail_text,
+      thumbnailUrl: video.thumbnail_url || '',
+      actualViews: video.actual_views ? video.actual_views.toString() : '',
+      sourceType: video.source_type,
+      channelName: video.channel_name || 'Bazu Podcast',
+      guestName: video.guest_name || '',
+      isTrainingSet: video.is_training_set,
+    });
+    setShowAddForm(false);
+  };
+
+  // Update existing video
+  const handleUpdateVideo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingVideo) return;
+
+    setSubmitting(true);
+
+    try {
+      const response = await fetch(`/api/videos/${editingVideo.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: formData.title,
+          thumbnailText: formData.thumbnailText,
+          thumbnailUrl: formData.thumbnailUrl,
+          actualViews: formData.actualViews ? parseInt(formData.actualViews) : null,
+          sourceType: formData.sourceType,
+          channelName: formData.channelName,
+          guestName: formData.guestName,
+          isTrainingSet: formData.isTrainingSet,
+        }),
+      });
+
+      if (response.ok) {
+        // Reset form and close edit modal
+        setEditingVideo(null);
+        setFormData({
+          guestName: '',
+          title: '',
+          thumbnailText: '',
+          thumbnailUrl: '',
+          actualViews: '',
+          sourceType: 'own',
+          channelName: 'Bazu Podcast',
+          isTrainingSet: true,
+        });
+
+        // Refresh rankings (this will recalibrate automatically)
+        await fetchRankings();
+        alert('Videó sikeresen frissítve! A becslések újrakalkulálódtak.');
+      } else {
+        const errorData = await response.json();
+        alert(`Sikertelen frissítés: ${errorData.error || 'Ismeretlen hiba'}`);
+      }
+    } catch (error) {
+      console.error('Error updating video:', error);
+      alert('Hálózati hiba');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   useEffect(() => {
     fetchRankings();
   }, []);
@@ -294,12 +363,222 @@ export default function AdminPage() {
         {/* Add Video Button */}
         <div className="mb-6">
           <button
-            onClick={() => setShowAddForm(!showAddForm)}
+            onClick={() => {
+              setShowAddForm(!showAddForm);
+              setEditingVideo(null); // Close edit form when opening add form
+            }}
             className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition"
           >
             {showAddForm ? 'Mégse' : '+ Új Videó Hozzáadása'}
           </button>
         </div>
+
+        {/* Edit Video Form */}
+        {editingVideo && (
+          <div className="bg-gradient-to-br from-blue-50 to-green-50 rounded-lg shadow-lg p-6 mb-6 border-2 border-blue-200">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold text-blue-900">Videó Szerkesztése</h2>
+              <button
+                onClick={() => {
+                  setEditingVideo(null);
+                  setFormData({
+                    guestName: '',
+                    title: '',
+                    thumbnailText: '',
+                    thumbnailUrl: '',
+                    actualViews: '',
+                    sourceType: 'own',
+                    channelName: 'Bazu Podcast',
+                    isTrainingSet: true,
+                  });
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕ Bezárás
+              </button>
+            </div>
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+              <p className="text-sm text-yellow-800">
+                💡 <strong>Tipp:</strong> Ha egy teszt packaging már ki lett rakva és van tényleges nézettségi adata,
+                itt beállíthatod az <strong>Actual Views</strong>-t és bekapcsolhatod a <strong>Training Set</strong>-et.
+                Így a rendszer tanul belőle és pontosabb becsléseket ad!
+              </p>
+            </div>
+            <form onSubmit={handleUpdateVideo} className="space-y-4">
+              {/* Source Type */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Típus *
+                </label>
+                <select
+                  required
+                  value={formData.sourceType}
+                  onChange={(e) => {
+                    const sourceType = e.target.value as SourceType;
+                    setFormData({
+                      ...formData,
+                      sourceType,
+                      isTrainingSet: sourceType === 'own', // Auto-set training for own videos
+                    });
+                  }}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                >
+                  <option value="own">Saját (Bazu Podcast)</option>
+                  <option value="competitor">Versenytárs</option>
+                  <option value="test">Teszt (új packaging)</option>
+                </select>
+              </div>
+
+              {/* Guest Name (for own videos) */}
+              {formData.sourceType === 'own' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Vendég Neve *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.guestName}
+                    onChange={(e) => setFormData({ ...formData, guestName: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                    placeholder="Pl: Kapitány István"
+                  />
+                </div>
+              )}
+
+              {/* Channel Name (for competitors) */}
+              {formData.sourceType === 'competitor' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Csatorna Neve
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.channelName}
+                    onChange={(e) => setFormData({ ...formData, channelName: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                    placeholder="Pl: Podcastboy"
+                  />
+                </div>
+              )}
+
+              {/* Title */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Videó Címe *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                  placeholder="Pl: Hogyan építs sikeres podcastot"
+                />
+              </div>
+
+              {/* Thumbnail Text */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Thumbnail Szöveg (Opcionális)
+                </label>
+                <input
+                  type="text"
+                  value={formData.thumbnailText}
+                  onChange={(e) => setFormData({ ...formData, thumbnailText: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                  placeholder="Pl: PODCAST TITKOK"
+                />
+              </div>
+
+              {/* Thumbnail URL */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  YouTube URL vagy Thumbnail URL (Opcionális)
+                </label>
+                <input
+                  type="url"
+                  value={formData.thumbnailUrl}
+                  onChange={(e) => {
+                    const inputUrl = e.target.value;
+                    const thumbnailUrl = convertYouTubeUrlToThumbnail(inputUrl);
+                    setFormData({ ...formData, thumbnailUrl });
+                  }}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                  placeholder="https://www.youtube.com/watch?v=VIDEO_ID"
+                />
+              </div>
+
+              {/* Actual Views */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Tényleges Nézettség {formData.sourceType !== 'test' && '*'}
+                </label>
+                <input
+                  type="number"
+                  required={formData.sourceType !== 'test'}
+                  value={formData.actualViews}
+                  onChange={(e) => setFormData({ ...formData, actualViews: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                  placeholder="Pl: 85000"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  {formData.sourceType === 'test'
+                    ? 'Ha a teszt packaging már ki lett rakva és van tényleges adat, add meg!'
+                    : 'Add meg a videó tényleges nézettségét a kalibráció pontosságához'}
+                </p>
+              </div>
+
+              {/* Training Set Checkbox */}
+              <div>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={formData.isTrainingSet}
+                    onChange={(e) => setFormData({ ...formData, isTrainingSet: e.target.checked })}
+                    className="mr-2 w-4 h-4"
+                  />
+                  <span className="text-sm text-gray-700">
+                    Használd kalibrációhoz (training set)
+                  </span>
+                </label>
+                <p className="text-xs text-gray-500 mt-1 ml-6">
+                  Bekapcsolva: A rendszer tanul ebből a videóból (pontosabb becslések)
+                </p>
+              </div>
+
+              {/* Submit Button */}
+              <div className="flex gap-4">
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="flex-1 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+                >
+                  {submitting ? 'Frissítés...' : '💾 Mentés'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingVideo(null);
+                    setFormData({
+                      guestName: '',
+                      title: '',
+                      thumbnailText: '',
+                      thumbnailUrl: '',
+                      actualViews: '',
+                      sourceType: 'own',
+                      channelName: 'Bazu Podcast',
+                      isTrainingSet: true,
+                    });
+                  }}
+                  className="bg-gray-300 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-400 transition"
+                >
+                  Mégse
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
 
         {/* Add Video Form */}
         {showAddForm && (
@@ -666,13 +945,21 @@ export default function AdminPage() {
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <button
-                          onClick={() => handleDeleteVideo(video.id)}
-                          disabled={deleting === video.id}
-                          className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition disabled:opacity-50 text-sm"
-                        >
-                          {deleting === video.id ? 'Törlés...' : '🗑️ Törlés'}
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleEditClick(video)}
+                            className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition text-sm"
+                          >
+                            ✏️ Szerkeszt
+                          </button>
+                          <button
+                            onClick={() => handleDeleteVideo(video.id)}
+                            disabled={deleting === video.id}
+                            className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition disabled:opacity-50 text-sm"
+                          >
+                            {deleting === video.id ? 'Törlés...' : '🗑️'}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
