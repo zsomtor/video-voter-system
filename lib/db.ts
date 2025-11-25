@@ -14,6 +14,7 @@ export interface Video {
   channel_name: string | null;
   guest_name: string | null;
   is_training_set: boolean;
+  test_group_id: string | null; // For A/B testing: videos with same test_group_id are variants
   created_at: Date;
 }
 
@@ -48,6 +49,7 @@ export async function initDatabase() {
         channel_name TEXT,
         guest_name TEXT,
         is_training_set BOOLEAN DEFAULT false,
+        test_group_id TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;
@@ -72,6 +74,10 @@ export async function initDatabase() {
     `;
 
     await sql`
+      CREATE INDEX idx_videos_test_group ON videos(test_group_id) WHERE test_group_id IS NOT NULL
+    `;
+
+    await sql`
       CREATE INDEX idx_votes_created ON votes(created_at DESC)
     `;
 
@@ -84,11 +90,70 @@ export async function initDatabase() {
 }
 
 /**
+ * Helper function: Uncertainty-aware pairing algorithm
+ * Given an array of videos, select two using smart pairing strategy
+ */
+function getUncertaintyAwarePair(videos: Video[]): [Video, Video] | null {
+  if (videos.length < 2) {
+    return null;
+  }
+
+  // Step 1: Select first video weighted by uncertainty
+  const weights = videos.map((v) => 1 / (v.vote_count + 1));
+  const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+
+  let random = Math.random() * totalWeight;
+  let firstVideoIndex = 0;
+  for (let i = 0; i < weights.length; i++) {
+    random -= weights[i];
+    if (random <= 0) {
+      firstVideoIndex = i;
+      break;
+    }
+  }
+
+  const firstVideo = videos[firstVideoIndex];
+
+  // Step 2: Select second video based on first video's uncertainty
+  let secondVideo: Video;
+
+  if (firstVideo.vote_count < 3) {
+    // New video: pair with any other video (random exploration)
+    const otherVideos = videos.filter((v) => v.id !== firstVideo.id);
+    secondVideo = otherVideos[Math.floor(Math.random() * otherVideos.length)];
+  } else {
+    // Established video: pair with ELO-similar video (informative comparison)
+    const eloRange = 200;
+    const similarVideos = videos.filter(
+      (v) =>
+        v.id !== firstVideo.id &&
+        Math.abs(v.elo_rating - firstVideo.elo_rating) <= eloRange
+    );
+
+    if (similarVideos.length > 0) {
+      secondVideo = similarVideos[Math.floor(Math.random() * similarVideos.length)];
+    } else {
+      const sortedByDistance = videos
+        .filter((v) => v.id !== firstVideo.id)
+        .sort((a, b) => {
+          const distA = Math.abs(a.elo_rating - firstVideo.elo_rating);
+          const distB = Math.abs(b.elo_rating - firstVideo.elo_rating);
+          return distA - distB;
+        });
+      secondVideo = sortedByDistance[0];
+    }
+  }
+
+  return [firstVideo, secondVideo];
+}
+
+/**
  * Get two videos for comparison using uncertainty-aware pairing
  * This smart algorithm maximizes information gained from each vote:
  * 1. Prioritizes videos with fewer votes (higher uncertainty)
  * 2. Pairs videos with similar ELO ratings (most informative comparisons)
  * 3. Adapts strategy based on vote count (exploration vs exploitation)
+ * 4. A/B Test Mode: 70% chance to pair videos from same test_group_id
  */
 export async function getRandomVideoPair(): Promise<[Video, Video] | null> {
   try {
@@ -105,58 +170,38 @@ export async function getRandomVideoPair(): Promise<[Video, Video] | null> {
 
     const videos = allVideos.rows;
 
-    // Step 1: Select first video weighted by uncertainty
-    // Uncertainty = 1 / (vote_count + 1)
-    // Videos with fewer votes have higher weight
-    const weights = videos.map((v) => 1 / (v.vote_count + 1));
-    const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+    // A/B Test Mode: 70% chance to pair videos from same test_group_id
+    const testGroupVideos = videos.filter((v) => v.test_group_id !== null);
+    const testGroups = new Map<string, Video[]>();
 
-    let random = Math.random() * totalWeight;
-    let firstVideoIndex = 0;
-    for (let i = 0; i < weights.length; i++) {
-      random -= weights[i];
-      if (random <= 0) {
-        firstVideoIndex = i;
-        break;
+    // Group videos by test_group_id
+    testGroupVideos.forEach((v) => {
+      if (v.test_group_id) {
+        if (!testGroups.has(v.test_group_id)) {
+          testGroups.set(v.test_group_id, []);
+        }
+        testGroups.get(v.test_group_id)!.push(v);
       }
+    });
+
+    // Find test groups with at least 2 videos
+    const validTestGroups = Array.from(testGroups.entries()).filter(
+      ([_, videos]) => videos.length >= 2
+    );
+
+    // 70% chance to use A/B test pairing if available
+    if (validTestGroups.length > 0 && Math.random() < 0.7) {
+      // Pick random test group
+      const [testGroupId, groupVideos] = validTestGroups[
+        Math.floor(Math.random() * validTestGroups.length)
+      ];
+
+      // Use uncertainty-aware pairing within the test group
+      return getUncertaintyAwarePair(groupVideos);
     }
 
-    const firstVideo = videos[firstVideoIndex];
-
-    // Step 2: Select second video based on first video's uncertainty
-    let secondVideo: Video;
-
-    if (firstVideo.vote_count < 3) {
-      // New video: pair with any other video (random exploration)
-      const otherVideos = videos.filter((v) => v.id !== firstVideo.id);
-      secondVideo = otherVideos[Math.floor(Math.random() * otherVideos.length)];
-    } else {
-      // Established video: pair with ELO-similar video (informative comparison)
-      // Find videos within ±200 ELO range
-      const eloRange = 200;
-      const similarVideos = videos.filter(
-        (v) =>
-          v.id !== firstVideo.id &&
-          Math.abs(v.elo_rating - firstVideo.elo_rating) <= eloRange
-      );
-
-      if (similarVideos.length > 0) {
-        // Pick randomly from similar videos
-        secondVideo = similarVideos[Math.floor(Math.random() * similarVideos.length)];
-      } else {
-        // No similar videos: pick the closest one
-        const sortedByDistance = videos
-          .filter((v) => v.id !== firstVideo.id)
-          .sort((a, b) => {
-            const distA = Math.abs(a.elo_rating - firstVideo.elo_rating);
-            const distB = Math.abs(b.elo_rating - firstVideo.elo_rating);
-            return distA - distB;
-          });
-        secondVideo = sortedByDistance[0];
-      }
-    }
-
-    return [firstVideo, secondVideo];
+    // Fall back to regular uncertainty-aware pairing
+    return getUncertaintyAwarePair(videos);
   } catch (error) {
     console.error('Error getting random video pair:', error);
     throw error;
@@ -165,7 +210,7 @@ export async function getRandomVideoPair(): Promise<[Video, Video] | null> {
 
 /**
  * Get two videos from Bazu Podcast only using uncertainty-aware pairing
- * For internal Bazu ranking with smart pairing strategy
+ * For internal Bazu ranking with smart pairing strategy and A/B test support
  */
 export async function getBazuOnlyVideoPair(): Promise<[Video, Video] | null> {
   try {
@@ -182,53 +227,32 @@ export async function getBazuOnlyVideoPair(): Promise<[Video, Video] | null> {
 
     const videos = allVideos.rows;
 
-    // Step 1: Select first video weighted by uncertainty
-    const weights = videos.map((v) => 1 / (v.vote_count + 1));
-    const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+    // A/B Test Mode: 70% chance to pair videos from same test_group_id
+    const testGroupVideos = videos.filter((v) => v.test_group_id !== null);
+    const testGroups = new Map<string, Video[]>();
 
-    let random = Math.random() * totalWeight;
-    let firstVideoIndex = 0;
-    for (let i = 0; i < weights.length; i++) {
-      random -= weights[i];
-      if (random <= 0) {
-        firstVideoIndex = i;
-        break;
+    testGroupVideos.forEach((v) => {
+      if (v.test_group_id) {
+        if (!testGroups.has(v.test_group_id)) {
+          testGroups.set(v.test_group_id, []);
+        }
+        testGroups.get(v.test_group_id)!.push(v);
       }
+    });
+
+    const validTestGroups = Array.from(testGroups.entries()).filter(
+      ([_, videos]) => videos.length >= 2
+    );
+
+    if (validTestGroups.length > 0 && Math.random() < 0.7) {
+      const [testGroupId, groupVideos] = validTestGroups[
+        Math.floor(Math.random() * validTestGroups.length)
+      ];
+      return getUncertaintyAwarePair(groupVideos);
     }
 
-    const firstVideo = videos[firstVideoIndex];
-
-    // Step 2: Select second video based on first video's uncertainty
-    let secondVideo: Video;
-
-    if (firstVideo.vote_count < 3) {
-      // New video: pair with any other video (random exploration)
-      const otherVideos = videos.filter((v) => v.id !== firstVideo.id);
-      secondVideo = otherVideos[Math.floor(Math.random() * otherVideos.length)];
-    } else {
-      // Established video: pair with ELO-similar video
-      const eloRange = 200;
-      const similarVideos = videos.filter(
-        (v) =>
-          v.id !== firstVideo.id &&
-          Math.abs(v.elo_rating - firstVideo.elo_rating) <= eloRange
-      );
-
-      if (similarVideos.length > 0) {
-        secondVideo = similarVideos[Math.floor(Math.random() * similarVideos.length)];
-      } else {
-        const sortedByDistance = videos
-          .filter((v) => v.id !== firstVideo.id)
-          .sort((a, b) => {
-            const distA = Math.abs(a.elo_rating - firstVideo.elo_rating);
-            const distB = Math.abs(b.elo_rating - firstVideo.elo_rating);
-            return distA - distB;
-          });
-        secondVideo = sortedByDistance[0];
-      }
-    }
-
-    return [firstVideo, secondVideo];
+    // Fall back to regular uncertainty-aware pairing
+    return getUncertaintyAwarePair(videos);
   } catch (error) {
     console.error('Error getting Bazu-only video pair:', error);
     throw error;
@@ -310,7 +334,8 @@ export async function addVideo(
   guestName: string | null = null,
   isTrainingSet: boolean = false,
   initialRating: number = 1500,
-  thumbnailUrl: string | null = null
+  thumbnailUrl: string | null = null,
+  testGroupId: string | null = null
 ): Promise<Video> {
   try {
     const result = await sql<Video>`
@@ -323,7 +348,8 @@ export async function addVideo(
         channel_name,
         guest_name,
         is_training_set,
-        elo_rating
+        elo_rating,
+        test_group_id
       )
       VALUES (
         ${title},
@@ -334,7 +360,8 @@ export async function addVideo(
         ${channelName},
         ${guestName},
         ${isTrainingSet},
-        ${initialRating}
+        ${initialRating},
+        ${testGroupId}
       )
       RETURNING *
     `;
@@ -441,53 +468,32 @@ export async function getTrainingVideoPair(): Promise<[Video, Video] | null> {
 
     const videos = allVideos.rows;
 
-    // Step 1: Select first video weighted by uncertainty
-    const weights = videos.map((v) => 1 / (v.vote_count + 1));
-    const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+    // A/B Test Mode: 70% chance to pair videos from same test_group_id
+    const testGroupVideos = videos.filter((v) => v.test_group_id !== null);
+    const testGroups = new Map<string, Video[]>();
 
-    let random = Math.random() * totalWeight;
-    let firstVideoIndex = 0;
-    for (let i = 0; i < weights.length; i++) {
-      random -= weights[i];
-      if (random <= 0) {
-        firstVideoIndex = i;
-        break;
+    testGroupVideos.forEach((v) => {
+      if (v.test_group_id) {
+        if (!testGroups.has(v.test_group_id)) {
+          testGroups.set(v.test_group_id, []);
+        }
+        testGroups.get(v.test_group_id)!.push(v);
       }
+    });
+
+    const validTestGroups = Array.from(testGroups.entries()).filter(
+      ([_, videos]) => videos.length >= 2
+    );
+
+    if (validTestGroups.length > 0 && Math.random() < 0.7) {
+      const [testGroupId, groupVideos] = validTestGroups[
+        Math.floor(Math.random() * validTestGroups.length)
+      ];
+      return getUncertaintyAwarePair(groupVideos);
     }
 
-    const firstVideo = videos[firstVideoIndex];
-
-    // Step 2: Select second video based on first video's uncertainty
-    let secondVideo: Video;
-
-    if (firstVideo.vote_count < 3) {
-      // New video: pair with any other video (random exploration)
-      const otherVideos = videos.filter((v) => v.id !== firstVideo.id);
-      secondVideo = otherVideos[Math.floor(Math.random() * otherVideos.length)];
-    } else {
-      // Established video: pair with ELO-similar video
-      const eloRange = 200;
-      const similarVideos = videos.filter(
-        (v) =>
-          v.id !== firstVideo.id &&
-          Math.abs(v.elo_rating - firstVideo.elo_rating) <= eloRange
-      );
-
-      if (similarVideos.length > 0) {
-        secondVideo = similarVideos[Math.floor(Math.random() * similarVideos.length)];
-      } else {
-        const sortedByDistance = videos
-          .filter((v) => v.id !== firstVideo.id)
-          .sort((a, b) => {
-            const distA = Math.abs(a.elo_rating - firstVideo.elo_rating);
-            const distB = Math.abs(b.elo_rating - firstVideo.elo_rating);
-            return distA - distB;
-          });
-        secondVideo = sortedByDistance[0];
-      }
-    }
-
-    return [firstVideo, secondVideo];
+    // Fall back to regular uncertainty-aware pairing
+    return getUncertaintyAwarePair(videos);
   } catch (error) {
     console.error('Error getting training video pair:', error);
     throw error;

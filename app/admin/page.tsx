@@ -17,6 +17,7 @@ interface RankedVideo {
   channel_name: string | null;
   guest_name: string | null;
   is_training_set: boolean;
+  test_group_id: string | null;
   estimatedViews: number;
   confidence: number;
   tier: string;
@@ -59,6 +60,7 @@ export default function AdminPage() {
     sourceType: 'own' as SourceType,
     channelName: 'Bazu Podcast',
     isTrainingSet: true,
+    testGroupId: '',
   });
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -143,6 +145,7 @@ export default function AdminPage() {
           channelName: formData.channelName || null,
           guestName: formData.guestName || null,
           isTrainingSet: formData.isTrainingSet,
+          testGroupId: formData.testGroupId || null,
         }),
       });
 
@@ -157,6 +160,7 @@ export default function AdminPage() {
           sourceType: 'own',
           channelName: 'Bazu Podcast',
           isTrainingSet: true,
+          testGroupId: '',
         });
         setThumbnailFile(null);
         setShowAddForm(false);
@@ -214,6 +218,7 @@ export default function AdminPage() {
       channelName: video.channel_name || 'Bazu Podcast',
       guestName: video.guest_name || '',
       isTrainingSet: video.is_training_set,
+      testGroupId: video.test_group_id || '',
     });
     setShowAddForm(false);
   };
@@ -238,6 +243,7 @@ export default function AdminPage() {
           channelName: formData.channelName,
           guestName: formData.guestName,
           isTrainingSet: formData.isTrainingSet,
+          testGroupId: formData.testGroupId || null,
         }),
       });
 
@@ -253,6 +259,7 @@ export default function AdminPage() {
           sourceType: 'own',
           channelName: 'Bazu Podcast',
           isTrainingSet: true,
+          testGroupId: '',
         });
 
         // Refresh rankings (this will recalibrate automatically)
@@ -420,6 +427,7 @@ export default function AdminPage() {
                     sourceType: 'own',
                     channelName: 'Bazu Podcast',
                     isTrainingSet: true,
+                    testGroupId: '',
                   });
                 }}
                 className="text-gray-500 hover:text-gray-700"
@@ -599,6 +607,27 @@ export default function AdminPage() {
                 </p>
               </div>
 
+              {/* Test Group ID (for A/B testing) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  🧪 A/B Test Group ID (Opcionális)
+                </label>
+                <input
+                  type="text"
+                  value={formData.testGroupId}
+                  onChange={(e) => setFormData({ ...formData, testGroupId: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                  placeholder="Pl: kapitany-tesztcsokor-v1"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  <strong>A/B teszteléshez:</strong> Adj ugyanazt a Group ID-t több packaging változatnak.
+                  A rendszer 70% eséllyel párosítja az azonos Group ID-jú videókat egymással.
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  💡 Példa: 3 packaging teszt → mindegyiknek adj "video-123-test" Group ID-t
+                </p>
+              </div>
+
               {/* Submit Button */}
               <div className="flex gap-4">
                 <button
@@ -621,6 +650,7 @@ export default function AdminPage() {
                       sourceType: 'own',
                       channelName: 'Bazu Podcast',
                       isTrainingSet: true,
+                      testGroupId: '',
                     });
                   }}
                   className="bg-gray-300 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-400 transition"
@@ -819,6 +849,27 @@ export default function AdminPage() {
                 </label>
                 <p className="text-xs text-gray-500 mt-1 ml-6">
                   Ajánlott minden saját videónál, ahol ismered a nézettséget
+                </p>
+              </div>
+
+              {/* Test Group ID (for A/B testing) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  🧪 A/B Test Group ID (Opcionális)
+                </label>
+                <input
+                  type="text"
+                  value={formData.testGroupId}
+                  onChange={(e) => setFormData({ ...formData, testGroupId: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                  placeholder="Pl: kapitany-tesztcsokor-v1"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  <strong>A/B teszteléshez:</strong> Adj ugyanazt a Group ID-t több packaging változatnak.
+                  A rendszer 70% eséllyel párosítja az azonos Group ID-jú videókat egymással.
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  💡 Példa: Ha 3 teszt packagingot akarsz összehasonlítani, mindegyiknek adj "videocim-abtest-v1" Group ID-t
                 </p>
               </div>
 

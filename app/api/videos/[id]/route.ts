@@ -30,6 +30,7 @@ export async function PUT(
       channelName,
       guestName,
       isTrainingSet,
+      testGroupId,
     } = body;
 
     // Update the video
@@ -43,7 +44,8 @@ export async function PUT(
         source_type = ${sourceType},
         channel_name = ${channelName || null},
         guest_name = ${guestName || null},
-        is_training_set = ${isTrainingSet}
+        is_training_set = ${isTrainingSet},
+        test_group_id = ${testGroupId || null}
       WHERE id = ${videoId}
       RETURNING *
     `;

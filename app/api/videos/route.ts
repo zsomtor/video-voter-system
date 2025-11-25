@@ -14,7 +14,8 @@ import { estimateRatingFromViews, calibrateFromTrainingSet } from '@/lib/calibra
  *   actualViews?: number,
  *   channelName?: string,
  *   guestName?: string,
- *   isTrainingSet?: boolean
+ *   isTrainingSet?: boolean,
+ *   testGroupId?: string
  * }
  */
 export async function POST(request: NextRequest) {
@@ -29,6 +30,7 @@ export async function POST(request: NextRequest) {
       channelName,
       guestName,
       isTrainingSet,
+      testGroupId,
     } = body;
 
     // Validate input
@@ -66,7 +68,8 @@ export async function POST(request: NextRequest) {
       guestName || null,
       isTrainingSet || false,
       initialRating,
-      thumbnailUrl || null
+      thumbnailUrl || null,
+      testGroupId || null
     );
 
     return NextResponse.json({
