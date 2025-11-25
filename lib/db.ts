@@ -84,25 +84,79 @@ export async function initDatabase() {
 }
 
 /**
- * Get two random videos for comparison
- * Prioritizes videos with fewer votes to balance data collection
+ * Get two videos for comparison using uncertainty-aware pairing
+ * This smart algorithm maximizes information gained from each vote:
+ * 1. Prioritizes videos with fewer votes (higher uncertainty)
+ * 2. Pairs videos with similar ELO ratings (most informative comparisons)
+ * 3. Adapts strategy based on vote count (exploration vs exploitation)
  */
 export async function getRandomVideoPair(): Promise<[Video, Video] | null> {
   try {
-    // Get videos weighted by vote count (prefer videos with fewer votes)
-    // This ensures new videos get rated quickly
-    const result = await sql<Video>`
+    // Get all videos
+    const allVideos = await sql<Video>`
       SELECT *
       FROM videos
-      ORDER BY (vote_count + 1) * RANDOM()
-      LIMIT 2
+      ORDER BY id
     `;
 
-    if (result.rows.length < 2) {
+    if (allVideos.rows.length < 2) {
       return null;
     }
 
-    return [result.rows[0], result.rows[1]];
+    const videos = allVideos.rows;
+
+    // Step 1: Select first video weighted by uncertainty
+    // Uncertainty = 1 / (vote_count + 1)
+    // Videos with fewer votes have higher weight
+    const weights = videos.map((v) => 1 / (v.vote_count + 1));
+    const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+
+    let random = Math.random() * totalWeight;
+    let firstVideoIndex = 0;
+    for (let i = 0; i < weights.length; i++) {
+      random -= weights[i];
+      if (random <= 0) {
+        firstVideoIndex = i;
+        break;
+      }
+    }
+
+    const firstVideo = videos[firstVideoIndex];
+
+    // Step 2: Select second video based on first video's uncertainty
+    let secondVideo: Video;
+
+    if (firstVideo.vote_count < 3) {
+      // New video: pair with any other video (random exploration)
+      const otherVideos = videos.filter((v) => v.id !== firstVideo.id);
+      secondVideo = otherVideos[Math.floor(Math.random() * otherVideos.length)];
+    } else {
+      // Established video: pair with ELO-similar video (informative comparison)
+      // Find videos within ±200 ELO range
+      const eloRange = 200;
+      const similarVideos = videos.filter(
+        (v) =>
+          v.id !== firstVideo.id &&
+          Math.abs(v.elo_rating - firstVideo.elo_rating) <= eloRange
+      );
+
+      if (similarVideos.length > 0) {
+        // Pick randomly from similar videos
+        secondVideo = similarVideos[Math.floor(Math.random() * similarVideos.length)];
+      } else {
+        // No similar videos: pick the closest one
+        const sortedByDistance = videos
+          .filter((v) => v.id !== firstVideo.id)
+          .sort((a, b) => {
+            const distA = Math.abs(a.elo_rating - firstVideo.elo_rating);
+            const distB = Math.abs(b.elo_rating - firstVideo.elo_rating);
+            return distA - distB;
+          });
+        secondVideo = sortedByDistance[0];
+      }
+    }
+
+    return [firstVideo, secondVideo];
   } catch (error) {
     console.error('Error getting random video pair:', error);
     throw error;
@@ -110,24 +164,71 @@ export async function getRandomVideoPair(): Promise<[Video, Video] | null> {
 }
 
 /**
- * Get two random videos from Bazu Podcast only
- * For internal Bazu ranking
+ * Get two videos from Bazu Podcast only using uncertainty-aware pairing
+ * For internal Bazu ranking with smart pairing strategy
  */
 export async function getBazuOnlyVideoPair(): Promise<[Video, Video] | null> {
   try {
-    const result = await sql<Video>`
+    const allVideos = await sql<Video>`
       SELECT *
       FROM videos
       WHERE channel_name = 'Bazu Podcast'
-      ORDER BY (vote_count + 1) * RANDOM()
-      LIMIT 2
+      ORDER BY id
     `;
 
-    if (result.rows.length < 2) {
+    if (allVideos.rows.length < 2) {
       return null;
     }
 
-    return [result.rows[0], result.rows[1]];
+    const videos = allVideos.rows;
+
+    // Step 1: Select first video weighted by uncertainty
+    const weights = videos.map((v) => 1 / (v.vote_count + 1));
+    const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+
+    let random = Math.random() * totalWeight;
+    let firstVideoIndex = 0;
+    for (let i = 0; i < weights.length; i++) {
+      random -= weights[i];
+      if (random <= 0) {
+        firstVideoIndex = i;
+        break;
+      }
+    }
+
+    const firstVideo = videos[firstVideoIndex];
+
+    // Step 2: Select second video based on first video's uncertainty
+    let secondVideo: Video;
+
+    if (firstVideo.vote_count < 3) {
+      // New video: pair with any other video (random exploration)
+      const otherVideos = videos.filter((v) => v.id !== firstVideo.id);
+      secondVideo = otherVideos[Math.floor(Math.random() * otherVideos.length)];
+    } else {
+      // Established video: pair with ELO-similar video
+      const eloRange = 200;
+      const similarVideos = videos.filter(
+        (v) =>
+          v.id !== firstVideo.id &&
+          Math.abs(v.elo_rating - firstVideo.elo_rating) <= eloRange
+      );
+
+      if (similarVideos.length > 0) {
+        secondVideo = similarVideos[Math.floor(Math.random() * similarVideos.length)];
+      } else {
+        const sortedByDistance = videos
+          .filter((v) => v.id !== firstVideo.id)
+          .sort((a, b) => {
+            const distA = Math.abs(a.elo_rating - firstVideo.elo_rating);
+            const distB = Math.abs(b.elo_rating - firstVideo.elo_rating);
+            return distA - distB;
+          });
+        secondVideo = sortedByDistance[0];
+      }
+    }
+
+    return [firstVideo, secondVideo];
   } catch (error) {
     console.error('Error getting Bazu-only video pair:', error);
     throw error;
@@ -322,23 +423,71 @@ export async function getVideosBySourceType(sourceType: SourceType): Promise<Vid
 }
 
 /**
- * Get random pair from training set only (for practice mode)
+ * Get training video pair using uncertainty-aware pairing (for practice mode)
+ * Smart pairing even for training helps users learn better comparison strategies
  */
 export async function getTrainingVideoPair(): Promise<[Video, Video] | null> {
   try {
-    const result = await sql<Video>`
+    const allVideos = await sql<Video>`
       SELECT *
       FROM videos
       WHERE is_training_set = true
-      ORDER BY (vote_count + 1) * RANDOM()
-      LIMIT 2
+      ORDER BY id
     `;
 
-    if (result.rows.length < 2) {
+    if (allVideos.rows.length < 2) {
       return null;
     }
 
-    return [result.rows[0], result.rows[1]];
+    const videos = allVideos.rows;
+
+    // Step 1: Select first video weighted by uncertainty
+    const weights = videos.map((v) => 1 / (v.vote_count + 1));
+    const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+
+    let random = Math.random() * totalWeight;
+    let firstVideoIndex = 0;
+    for (let i = 0; i < weights.length; i++) {
+      random -= weights[i];
+      if (random <= 0) {
+        firstVideoIndex = i;
+        break;
+      }
+    }
+
+    const firstVideo = videos[firstVideoIndex];
+
+    // Step 2: Select second video based on first video's uncertainty
+    let secondVideo: Video;
+
+    if (firstVideo.vote_count < 3) {
+      // New video: pair with any other video (random exploration)
+      const otherVideos = videos.filter((v) => v.id !== firstVideo.id);
+      secondVideo = otherVideos[Math.floor(Math.random() * otherVideos.length)];
+    } else {
+      // Established video: pair with ELO-similar video
+      const eloRange = 200;
+      const similarVideos = videos.filter(
+        (v) =>
+          v.id !== firstVideo.id &&
+          Math.abs(v.elo_rating - firstVideo.elo_rating) <= eloRange
+      );
+
+      if (similarVideos.length > 0) {
+        secondVideo = similarVideos[Math.floor(Math.random() * similarVideos.length)];
+      } else {
+        const sortedByDistance = videos
+          .filter((v) => v.id !== firstVideo.id)
+          .sort((a, b) => {
+            const distA = Math.abs(a.elo_rating - firstVideo.elo_rating);
+            const distB = Math.abs(b.elo_rating - firstVideo.elo_rating);
+            return distA - distB;
+          });
+        secondVideo = sortedByDistance[0];
+      }
+    }
+
+    return [firstVideo, secondVideo];
   } catch (error) {
     console.error('Error getting training video pair:', error);
     throw error;
