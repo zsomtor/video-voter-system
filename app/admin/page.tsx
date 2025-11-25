@@ -518,7 +518,18 @@ export default function AdminPage() {
                   type="number"
                   required={formData.sourceType !== 'test'}
                   value={formData.actualViews}
-                  onChange={(e) => setFormData({ ...formData, actualViews: e.target.value })}
+                  onChange={(e) => {
+                    const actualViews = e.target.value;
+                    const newFormData = { ...formData, actualViews };
+
+                    // Auto-convert test to own if training set is enabled and actual views are provided
+                    if (formData.sourceType === 'test' && formData.isTrainingSet && actualViews) {
+                      newFormData.sourceType = 'own';
+                      newFormData.channelName = 'Bazu Podcast';
+                    }
+
+                    setFormData(newFormData);
+                  }}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
                   placeholder="Pl: 85000"
                 />
@@ -535,7 +546,18 @@ export default function AdminPage() {
                   <input
                     type="checkbox"
                     checked={formData.isTrainingSet}
-                    onChange={(e) => setFormData({ ...formData, isTrainingSet: e.target.checked })}
+                    onChange={(e) => {
+                      const isTrainingSet = e.target.checked;
+                      const newFormData = { ...formData, isTrainingSet };
+
+                      // Auto-convert test to own if training set is enabled and actual views are provided
+                      if (formData.sourceType === 'test' && isTrainingSet && formData.actualViews) {
+                        newFormData.sourceType = 'own';
+                        newFormData.channelName = 'Bazu Podcast';
+                      }
+
+                      setFormData(newFormData);
+                    }}
                     className="mr-2 w-4 h-4"
                   />
                   <span className="text-sm text-gray-700">
