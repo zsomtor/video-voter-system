@@ -189,8 +189,8 @@ export async function getRandomVideoPair(): Promise<[Video, Video] | null> {
       ([_, videos]) => videos.length >= 2
     );
 
-    // 70% chance to use A/B test pairing if available
-    if (validTestGroups.length > 0 && Math.random() < 0.7) {
+    // 20% chance to use A/B test pairing if available (3 out of 15 votes)
+    if (validTestGroups.length > 0 && Math.random() < 0.2) {
       // Pick random test group
       const [testGroupId, groupVideos] = validTestGroups[
         Math.floor(Math.random() * validTestGroups.length)
@@ -244,7 +244,8 @@ export async function getBazuOnlyVideoPair(): Promise<[Video, Video] | null> {
       ([_, videos]) => videos.length >= 2
     );
 
-    if (validTestGroups.length > 0 && Math.random() < 0.7) {
+    // 20% chance to use A/B test pairing if available (3 out of 15 votes)
+    if (validTestGroups.length > 0 && Math.random() < 0.2) {
       const [testGroupId, groupVideos] = validTestGroups[
         Math.floor(Math.random() * validTestGroups.length)
       ];
@@ -485,7 +486,8 @@ export async function getTrainingVideoPair(): Promise<[Video, Video] | null> {
       ([_, videos]) => videos.length >= 2
     );
 
-    if (validTestGroups.length > 0 && Math.random() < 0.7) {
+    // 20% chance to use A/B test pairing if available (3 out of 15 votes)
+    if (validTestGroups.length > 0 && Math.random() < 0.2) {
       const [testGroupId, groupVideos] = validTestGroups[
         Math.floor(Math.random() * validTestGroups.length)
       ];
