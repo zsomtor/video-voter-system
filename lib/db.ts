@@ -15,6 +15,8 @@ export interface Video {
   guest_name: string | null;
   is_training_set: boolean;
   test_group_id: string | null; // For A/B testing: videos with same test_group_id are variants
+  test_group_elo: number; // Separate ELO for A/B test comparisons within test group
+  test_group_vote_count: number; // Vote count for test group comparisons
   created_at: Date;
 }
 
@@ -50,6 +52,8 @@ export async function initDatabase() {
         guest_name TEXT,
         is_training_set BOOLEAN DEFAULT false,
         test_group_id TEXT,
+        test_group_elo INTEGER DEFAULT 1500,
+        test_group_vote_count INTEGER DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;

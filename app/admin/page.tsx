@@ -18,6 +18,8 @@ interface RankedVideo {
   guest_name: string | null;
   is_training_set: boolean;
   test_group_id: string | null;
+  test_group_elo: number;
+  test_group_vote_count: number;
   estimatedViews: number;
   confidence: number;
   tier: string;
@@ -904,6 +906,9 @@ export default function AdminPage() {
                       ELO
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Test ELO
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Szint
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -997,6 +1002,20 @@ export default function AdminPage() {
                         <div className="text-lg font-semibold text-purple-600">
                           {video.elo_rating}
                         </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {video.test_group_id ? (
+                          <>
+                            <div className="text-lg font-semibold text-orange-600">
+                              {video.test_group_elo}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {video.test_group_vote_count} teszt
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-gray-400 text-sm">-</div>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className={`font-semibold ${video.tierColor}`}>

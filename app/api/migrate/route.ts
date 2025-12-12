@@ -52,6 +52,29 @@ export async function GET() {
       migrations.push('test_group_id index created');
     }
 
+    // Check if test_group_elo column exists
+    const checkTestGroupElo = await sql`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'videos'
+      AND column_name = 'test_group_elo'
+    `;
+
+    if (checkTestGroupElo.rows.length === 0) {
+      // Add test_group_elo and test_group_vote_count columns
+      await sql`
+        ALTER TABLE videos
+        ADD COLUMN test_group_elo INTEGER DEFAULT 1500
+      `;
+      migrations.push('test_group_elo column added');
+
+      await sql`
+        ALTER TABLE videos
+        ADD COLUMN test_group_vote_count INTEGER DEFAULT 0
+      `;
+      migrations.push('test_group_vote_count column added');
+    }
+
     if (migrations.length === 0) {
       return NextResponse.json({
         success: true,
