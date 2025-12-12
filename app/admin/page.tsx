@@ -52,6 +52,9 @@ export default function AdminPage() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingVideo, setEditingVideo] = useState<RankedVideo | null>(null);
   const [viewMode, setViewMode] = useState<'global' | 'test-groups'>('global');
+  const [finalizingTestGroup, setFinalizingTestGroup] = useState<{groupId: string, videos: RankedVideo[]} | null>(null);
+  const [selectedWinnerId, setSelectedWinnerId] = useState<number | null>(null);
+  const [finalActualViews, setFinalActualViews] = useState<string>('');
 
   // Form state
   const [formData, setFormData] = useState({
@@ -101,6 +104,49 @@ export default function AdminPage() {
       console.error('Error fetching rankings:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Finalize test group
+  const handleFinalizeTestGroup = async () => {
+    if (!finalizingTestGroup || !selectedWinnerId) {
+      alert('Kérlek válassz egy nyertes videót!');
+      return;
+    }
+
+    const confirmed = confirm(
+      `Biztosan véglegesíted ezt a tesztet?\n\n` +
+      `Nyertes: ${finalizingTestGroup.videos.find(v => v.id === selectedWinnerId)?.thumbnail_text}\n\n` +
+      `A többi ${finalizingTestGroup.videos.length - 1} videó törölve lesz!`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch('/api/finalize-test-group', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          testGroupId: finalizingTestGroup.groupId,
+          winnerId: selectedWinnerId,
+          actualViews: finalActualViews ? parseInt(finalActualViews) : null,
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(`✅ Teszt véglegesítve!\n\nNyertes: ${result.winner.title}\nTörölt videók: ${result.deletedCount}`);
+        setFinalizingTestGroup(null);
+        setSelectedWinnerId(null);
+        setFinalActualViews('');
+        await fetchRankings();
+      } else {
+        const error = await response.json();
+        alert(`Hiba: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Error finalizing test group:', error);
+      alert('Hiba történt a teszt véglegesítésekor');
     }
   };
 
@@ -1246,13 +1292,24 @@ export default function AdminPage() {
                             ))}
                           </div>
                           <div className="mt-4 p-3 bg-white rounded-lg border border-orange-300">
-                            <div className="text-sm text-gray-700">
-                              <strong>Nyertes:</strong> {videos[0].thumbnail_text}
-                              {videos[0].test_group_vote_count < 10 && (
-                                <span className="ml-2 text-orange-600">
-                                  ⚠️ Még csak {videos[0].test_group_vote_count} szavazat - legalább 10 ajánlott a megbízhatósághoz
-                                </span>
-                              )}
+                            <div className="flex items-center justify-between">
+                              <div className="text-sm text-gray-700">
+                                <strong>Nyertes:</strong> {videos[0].thumbnail_text}
+                                {videos[0].test_group_vote_count < 10 && (
+                                  <span className="ml-2 text-orange-600">
+                                    ⚠️ Még csak {videos[0].test_group_vote_count} szavazat - legalább 10 ajánlott a megbízhatósághoz
+                                  </span>
+                                )}
+                              </div>
+                              <button
+                                onClick={() => {
+                                  setFinalizingTestGroup({ groupId, videos });
+                                  setSelectedWinnerId(videos[0].id);
+                                }}
+                                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold"
+                              >
+                                ✅ Teszt Véglegesítése
+                              </button>
                             </div>
                           </div>
                         </div>
@@ -1396,6 +1453,123 @@ export default function AdminPage() {
             >
               Első Videó Hozzáadása
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Finalize Test Group Modal */}
+      {finalizingTestGroup && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-900">
+                🏁 Teszt Véglegesítése: {finalizingTestGroup.groupId}
+              </h2>
+              <p className="text-gray-600 mt-2">
+                Válaszd ki a nyertes packaging változatot. A többi videó törölve lesz!
+              </p>
+            </div>
+
+            <div className="p-6">
+              <div className="space-y-3 mb-6">
+                {finalizingTestGroup.videos.map((video, index) => (
+                  <div
+                    key={video.id}
+                    onClick={() => setSelectedWinnerId(video.id)}
+                    className={`p-4 rounded-lg border-2 cursor-pointer transition ${
+                      selectedWinnerId === video.id
+                        ? 'border-green-500 bg-green-50'
+                        : 'border-gray-300 hover:border-gray-400'
+                    }`}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="flex-shrink-0">
+                        {selectedWinnerId === video.id ? (
+                          <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                            <span className="text-white text-xl">✓</span>
+                          </div>
+                        ) : (
+                          <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+                        )}
+                      </div>
+                      {index === 0 && <span className="text-2xl">🏆</span>}
+                      {index === 1 && <span className="text-2xl">🥈</span>}
+                      {index === 2 && <span className="text-2xl">🥉</span>}
+
+                      {/* Thumbnail */}
+                      {video.thumbnail_url ? (
+                        <div className="relative w-24 h-14 flex-shrink-0 rounded overflow-hidden bg-gray-100">
+                          <Image
+                            src={video.thumbnail_url}
+                            alt={video.title}
+                            fill
+                            sizes="96px"
+                            className="object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-24 h-14 flex-shrink-0 rounded bg-gradient-to-br from-orange-100 to-red-100 flex items-center justify-center">
+                          <span className="text-2xl">🎬</span>
+                        </div>
+                      )}
+
+                      <div className="flex-1">
+                        <div className="font-semibold text-gray-900">{video.title}</div>
+                        <div className="text-sm text-gray-600">📸 {video.thumbnail_text}</div>
+                        <div className="text-sm text-orange-600 font-semibold mt-1">
+                          Test ELO: {video.test_group_elo} ({video.test_group_vote_count} szavazat)
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Optional: Add actual views */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  📊 Valós Nézettség (opcionális)
+                </label>
+                <input
+                  type="number"
+                  value={finalActualViews}
+                  onChange={(e) => setFinalActualViews(e.target.value)}
+                  placeholder="pl. 12500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Ha ismered a videó tényleges nézettségét, add meg itt. A nyertes videó átkerül az "own" kategóriába.
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setFinalizingTestGroup(null);
+                    setSelectedWinnerId(null);
+                    setFinalActualViews('');
+                  }}
+                  className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-semibold"
+                >
+                  Mégse
+                </button>
+                <button
+                  onClick={handleFinalizeTestGroup}
+                  disabled={!selectedWinnerId}
+                  className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  ✅ Véglegesítés
+                </button>
+              </div>
+
+              <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                <p className="text-sm text-orange-800">
+                  ⚠️ <strong>Figyelem:</strong> Ez a művelet nem visszavonható!
+                  A kiválasztott nyertes marad, a többi {finalizingTestGroup.videos.length - 1} videó véglegesen törlődik.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       )}
