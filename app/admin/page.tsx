@@ -51,6 +51,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingVideo, setEditingVideo] = useState<RankedVideo | null>(null);
+  const [viewMode, setViewMode] = useState<'global' | 'test-groups'>('global');
 
   // Form state
   const [formData, setFormData] = useState({
@@ -891,9 +892,34 @@ export default function AdminPage() {
       {/* Rankings Table */}
       {data && data.rankings.length > 0 && (
         <div className="max-w-7xl mx-auto">
+          {/* View Mode Toggle */}
+          <div className="mb-4 flex justify-center gap-4">
+            <button
+              onClick={() => setViewMode('global')}
+              className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                viewMode === 'global'
+                  ? 'bg-purple-600 text-white shadow-lg'
+                  : 'bg-white text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              📊 Globális Rangsor
+            </button>
+            <button
+              onClick={() => setViewMode('test-groups')}
+              className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                viewMode === 'test-groups'
+                  ? 'bg-orange-600 text-white shadow-lg'
+                  : 'bg-white text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              🧪 Test Group Eredmények
+            </button>
+          </div>
+
           <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
+            {viewMode === 'global' ? (
+              <div className="overflow-x-auto">
+                <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -1113,6 +1139,129 @@ export default function AdminPage() {
                 </tbody>
               </table>
             </div>
+            ) : (
+              /* Test Groups View */
+              <div className="p-6">
+                {(() => {
+                  // Group videos by test_group_id
+                  const testGroupVideos = data.rankings.filter(v => v.test_group_id);
+                  const groupedByTestGroup = new Map<string, RankedVideo[]>();
+
+                  testGroupVideos.forEach(video => {
+                    if (!groupedByTestGroup.has(video.test_group_id!)) {
+                      groupedByTestGroup.set(video.test_group_id!, []);
+                    }
+                    groupedByTestGroup.get(video.test_group_id!)!.push(video);
+                  });
+
+                  // Sort each group by test_group_elo
+                  groupedByTestGroup.forEach((videos) => {
+                    videos.sort((a, b) => b.test_group_elo - a.test_group_elo);
+                  });
+
+                  if (groupedByTestGroup.size === 0) {
+                    return (
+                      <div className="text-center py-12">
+                        <div className="text-6xl mb-4">🧪</div>
+                        <div className="text-xl text-gray-600">Még nincsenek test group videók</div>
+                        <p className="text-gray-500 mt-2">Adj hozzá videókat azonos Test Group ID-val az A/B teszteléshez</p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-8">
+                      {Array.from(groupedByTestGroup.entries()).map(([groupId, videos]) => (
+                        <div key={groupId} className="border-2 border-orange-200 rounded-lg p-6 bg-orange-50">
+                          <h3 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                            🧪 Test Group: <span className="text-orange-600">{groupId}</span>
+                          </h3>
+                          <div className="space-y-3">
+                            {videos.map((video, index) => (
+                              <div
+                                key={video.id}
+                                className={`p-4 rounded-lg border-2 ${
+                                  index === 0
+                                    ? 'bg-green-50 border-green-500'
+                                    : index === 1
+                                    ? 'bg-blue-50 border-blue-400'
+                                    : index === 2
+                                    ? 'bg-orange-50 border-orange-400'
+                                    : 'bg-white border-gray-300'
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-4">
+                                    <div className="text-3xl font-bold text-gray-700">
+                                      #{index + 1}
+                                    </div>
+                                    {index === 0 && <span className="text-3xl">🏆</span>}
+                                    {index === 1 && <span className="text-3xl">🥈</span>}
+                                    {index === 2 && <span className="text-3xl">🥉</span>}
+
+                                    {/* Thumbnail */}
+                                    {video.thumbnail_url ? (
+                                      <div className="relative w-32 h-18 flex-shrink-0 rounded overflow-hidden bg-gray-100">
+                                        <Image
+                                          src={video.thumbnail_url}
+                                          alt={video.title}
+                                          fill
+                                          sizes="128px"
+                                          className="object-cover"
+                                        />
+                                      </div>
+                                    ) : (
+                                      <div className="w-32 h-18 flex-shrink-0 rounded bg-gradient-to-br from-orange-100 to-red-100 flex items-center justify-center">
+                                        <span className="text-3xl">🎬</span>
+                                      </div>
+                                    )}
+
+                                    <div>
+                                      {video.guest_name && (
+                                        <div className="text-sm font-semibold text-purple-600 mb-1">
+                                          🎙️ {video.guest_name}
+                                        </div>
+                                      )}
+                                      <div className="font-semibold text-lg text-gray-900">{video.title}</div>
+                                      <div className="text-sm text-gray-600">📸 {video.thumbnail_text}</div>
+                                    </div>
+                                  </div>
+
+                                  <div className="text-right">
+                                    <div className="text-3xl font-bold text-orange-600">
+                                      {video.test_group_elo}
+                                    </div>
+                                    <div className="text-sm text-gray-600">
+                                      Test ELO
+                                    </div>
+                                    <div className="text-xs text-gray-500 mt-1">
+                                      {video.test_group_vote_count} teszt szavazat
+                                    </div>
+                                    <div className="text-xs text-gray-500 mt-1">
+                                      Global: #{video.rank} ({video.elo_rating})
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="mt-4 p-3 bg-white rounded-lg border border-orange-300">
+                            <div className="text-sm text-gray-700">
+                              <strong>Nyertes:</strong> {videos[0].thumbnail_text}
+                              {videos[0].test_group_vote_count < 10 && (
+                                <span className="ml-2 text-orange-600">
+                                  ⚠️ Még csak {videos[0].test_group_vote_count} szavazat - legalább 10 ajánlott a megbízhatósághoz
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
           </div>
         </div>
       )}
