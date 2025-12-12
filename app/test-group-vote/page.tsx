@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { calculateElo } from '@/lib/elo';
 
 interface Video {
   id: number;
