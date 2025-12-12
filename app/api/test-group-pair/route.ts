@@ -51,62 +51,11 @@ export async function GET() {
       Math.floor(Math.random() * validTestGroups.length)
     ];
 
-    // Use uncertainty-aware pairing within the test group
-    // Prioritize videos with fewer test_group_vote_count
-    const weights = groupVideos.map((v) => 1 / (v.test_group_vote_count + 1));
-    const totalWeight = weights.reduce((sum, w) => sum + w, 0);
-
-    // Select first video weighted by uncertainty
-    let random = Math.random() * totalWeight;
-    let firstVideoIndex = 0;
-    for (let i = 0; i < weights.length; i++) {
-      random -= weights[i];
-      if (random <= 0) {
-        firstVideoIndex = i;
-        break;
-      }
-    }
-
-    const firstVideo = groupVideos[firstVideoIndex];
-
-    // Select second video (excluding first)
-    let secondVideo;
-    if (firstVideo.test_group_vote_count < 3) {
-      // New video: random exploration
-      const otherVideos = groupVideos.filter((v) => v.id !== firstVideo.id);
-      secondVideo = otherVideos[Math.floor(Math.random() * otherVideos.length)];
-    } else {
-      // Established video: pair with similar test_group_elo
-      const eloRange = 200;
-      const similarVideos = groupVideos.filter(
-        (v) =>
-          v.id !== firstVideo.id &&
-          Math.abs(v.test_group_elo - firstVideo.test_group_elo) <= eloRange
-      );
-
-      if (similarVideos.length > 0) {
-        // Weight by uncertainty among similar videos
-        const similarWeights = similarVideos.map(
-          (v) => 1 / (v.test_group_vote_count + 1)
-        );
-        const similarTotalWeight = similarWeights.reduce((sum, w) => sum + w, 0);
-
-        let similarRandom = Math.random() * similarTotalWeight;
-        let secondVideoIndex = 0;
-        for (let i = 0; i < similarWeights.length; i++) {
-          similarRandom -= similarWeights[i];
-          if (similarRandom <= 0) {
-            secondVideoIndex = i;
-            break;
-          }
-        }
-        secondVideo = similarVideos[secondVideoIndex];
-      } else {
-        // No similar videos, pick random
-        const otherVideos = groupVideos.filter((v) => v.id !== firstVideo.id);
-        secondVideo = otherVideos[Math.floor(Math.random() * otherVideos.length)];
-      }
-    }
+    // Simple random pairing - all pairs have equal probability
+    // Shuffle the videos and take the first two
+    const shuffled = [...groupVideos].sort(() => Math.random() - 0.5);
+    const firstVideo = shuffled[0];
+    const secondVideo = shuffled[1];
 
     return NextResponse.json({
       video1: firstVideo,
