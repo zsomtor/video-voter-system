@@ -30,23 +30,12 @@ export default function IdeaAdminPage() {
   const [deleting, setDeleting] = useState<number | null>(null);
 
   const fetchIdeas = async () => {
-    console.log('fetchIdeas called');
     setLoading(true);
     try {
-      // Add timestamp to force cache bust
-      const timestamp = new Date().getTime();
-      const response = await fetch(`/api/idea-rankings?t=${timestamp}`, {
-        cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache',
-        },
-      });
-      console.log('Rankings response status:', response.status);
+      const response = await fetch('/api/idea-rankings');
       const data = await response.json();
-      console.log('Rankings data:', data);
       setIdeas(data.ideas);
       setTotalVotes(data.totalVotes);
-      console.log('State updated, ideas count:', data.ideas.length);
     } catch (error) {
       console.error('Error fetching ideas:', error);
     } finally {
@@ -60,11 +49,9 @@ export default function IdeaAdminPage() {
 
   const handleAddIdea = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('handleAddIdea called', formData);
     setSubmitting(true);
 
     try {
-      console.log('Sending request to /api/ideas');
       const response = await fetch('/api/ideas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -75,17 +62,12 @@ export default function IdeaAdminPage() {
         }),
       });
 
-      console.log('Response status:', response.status);
-
       if (response.ok) {
-        const result = await response.json();
-        console.log('Success:', result);
         setFormData({ title: '', thumbnailText: '', description: '' });
         setShowAddForm(false);
         await fetchIdeas();
       } else {
         const errorData = await response.json();
-        console.error('Server error:', errorData);
         alert(`Hiba történt az ötlet hozzáadásakor: ${errorData.error || 'Ismeretlen hiba'}`);
       }
     } catch (error) {
@@ -141,7 +123,6 @@ export default function IdeaAdminPage() {
         await fetchIdeas();
       } else {
         const errorData = await response.json();
-        console.error('Delete error:', errorData);
         alert(`Hiba történt az ötlet törlésekor: ${errorData.error || 'Ismeretlen hiba'}`);
       }
     } catch (error) {
