@@ -49,9 +49,11 @@ export default function IdeaAdminPage() {
 
   const handleAddIdea = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('handleAddIdea called', formData);
     setSubmitting(true);
 
     try {
+      console.log('Sending request to /api/ideas');
       const response = await fetch('/api/ideas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -62,7 +64,11 @@ export default function IdeaAdminPage() {
         }),
       });
 
+      console.log('Response status:', response.status);
+
       if (response.ok) {
+        const result = await response.json();
+        console.log('Success:', result);
         setFormData({ title: '', thumbnailText: '', description: '' });
         setShowAddForm(false);
         await fetchIdeas();
