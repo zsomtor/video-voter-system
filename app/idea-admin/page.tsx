@@ -33,7 +33,12 @@ export default function IdeaAdminPage() {
     console.log('fetchIdeas called');
     setLoading(true);
     try {
-      const response = await fetch('/api/idea-rankings');
+      const response = await fetch('/api/idea-rankings', {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      });
       console.log('Rankings response status:', response.status);
       const data = await response.json();
       console.log('Rankings data:', data);

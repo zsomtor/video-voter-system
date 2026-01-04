@@ -30,11 +30,20 @@ export async function GET() {
 
     console.log('[GET /api/idea-rankings] Returning:', { totalIdeas: ideas.length, totalVotes });
 
-    return NextResponse.json({
-      ideas: rankedIdeas,
-      totalIdeas: ideas.length,
-      totalVotes,
-    });
+    return NextResponse.json(
+      {
+        ideas: rankedIdeas,
+        totalIdeas: ideas.length,
+        totalVotes,
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        },
+      }
+    );
   } catch (error) {
     console.error('Error fetching idea rankings:', error);
     return NextResponse.json(
