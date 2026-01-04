@@ -7,12 +7,14 @@ import { sql } from '@vercel/postgres';
  */
 export async function GET() {
   try {
+    console.log('[GET /api/idea-rankings] Fetching ideas...');
     const result = await sql`
       SELECT * FROM ideas
       ORDER BY elo_rating DESC
     `;
 
     const ideas = result.rows;
+    console.log('[GET /api/idea-rankings] Found ideas:', ideas.length);
 
     // Calculate total votes
     const votesResult = await sql`
@@ -25,6 +27,8 @@ export async function GET() {
       ...idea,
       rank: index + 1,
     }));
+
+    console.log('[GET /api/idea-rankings] Returning:', { totalIdeas: ideas.length, totalVotes });
 
     return NextResponse.json({
       ideas: rankedIdeas,

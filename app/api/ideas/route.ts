@@ -32,6 +32,8 @@ export async function POST(request: Request) {
   try {
     const { title, thumbnailText, description } = await request.json();
 
+    console.log('[POST /api/ideas] Request:', { title, thumbnailText, description });
+
     if (!title || !thumbnailText) {
       return NextResponse.json(
         { error: 'Title and thumbnail text are required' },
@@ -39,11 +41,20 @@ export async function POST(request: Request) {
       );
     }
 
+    console.log('[POST /api/ideas] Inserting into database...');
     const result = await sql`
       INSERT INTO ideas (title, thumbnail_text, description)
       VALUES (${title}, ${thumbnailText}, ${description || null})
       RETURNING *
     `;
+
+    console.log('[POST /api/ideas] Insert result:', result.rows[0]);
+
+    // Verify it's in the database
+    const verifyResult = await sql`
+      SELECT COUNT(*) as count FROM ideas
+    `;
+    console.log('[POST /api/ideas] Total ideas in DB after insert:', verifyResult.rows[0].count);
 
     return NextResponse.json({
       success: true,
