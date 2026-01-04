@@ -67,7 +67,9 @@ export default function IdeaAdminPage() {
         setShowAddForm(false);
         await fetchIdeas();
       } else {
-        alert('Hiba történt az ötlet hozzáadásakor');
+        const errorData = await response.json();
+        console.error('Server error:', errorData);
+        alert(`Hiba történt az ötlet hozzáadásakor: ${errorData.error || 'Ismeretlen hiba'}`);
       }
     } catch (error) {
       console.error('Error adding idea:', error);
