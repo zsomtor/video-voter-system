@@ -123,7 +123,9 @@ export default function IdeaAdminPage() {
       if (response.ok) {
         await fetchIdeas();
       } else {
-        alert('Hiba történt az ötlet törlésekor');
+        const errorData = await response.json();
+        console.error('Delete error:', errorData);
+        alert(`Hiba történt az ötlet törlésekor: ${errorData.error || 'Ismeretlen hiba'}`);
       }
     } catch (error) {
       console.error('Error deleting idea:', error);

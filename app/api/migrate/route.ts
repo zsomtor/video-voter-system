@@ -97,23 +97,33 @@ export async function GET() {
       `;
       migrations.push('ideas table created');
 
+      // Create index
+      await sql`
+        CREATE INDEX idx_ideas_rating ON ideas(elo_rating DESC)
+      `;
+      migrations.push('ideas rating index created');
+    }
+
+    // Check if idea_votes table exists (separate check)
+    const checkIdeaVotesTable = await sql`
+      SELECT table_name
+      FROM information_schema.tables
+      WHERE table_name = 'idea_votes'
+    `;
+
+    if (checkIdeaVotesTable.rows.length === 0) {
       // Create idea_votes table
       await sql`
         CREATE TABLE idea_votes (
           id SERIAL PRIMARY KEY,
-          winner_id INTEGER NOT NULL REFERENCES ideas(id),
-          loser_id INTEGER NOT NULL REFERENCES ideas(id),
+          winner_id INTEGER NOT NULL REFERENCES ideas(id) ON DELETE CASCADE,
+          loser_id INTEGER NOT NULL REFERENCES ideas(id) ON DELETE CASCADE,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `;
       migrations.push('idea_votes table created');
 
-      // Create indexes
-      await sql`
-        CREATE INDEX idx_ideas_rating ON ideas(elo_rating DESC)
-      `;
-      migrations.push('ideas rating index created');
-
+      // Create index
       await sql`
         CREATE INDEX idx_idea_votes_created ON idea_votes(created_at DESC)
       `;
