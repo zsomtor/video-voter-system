@@ -27,6 +27,23 @@ export interface Vote {
   created_at: Date;
 }
 
+export interface Idea {
+  id: number;
+  title: string;
+  thumbnail_text: string;
+  description: string | null;
+  elo_rating: number;
+  vote_count: number;
+  created_at: Date;
+}
+
+export interface IdeaVote {
+  id: number;
+  winner_id: number;
+  loser_id: number;
+  created_at: Date;
+}
+
 /**
  * Initialize database tables
  * Run this once to set up your database
@@ -34,6 +51,8 @@ export interface Vote {
 export async function initDatabase() {
   try {
     // Drop old table if exists (for clean migration)
+    await sql`DROP TABLE IF EXISTS idea_votes CASCADE`;
+    await sql`DROP TABLE IF EXISTS ideas CASCADE`;
     await sql`DROP TABLE IF EXISTS votes CASCADE`;
     await sql`DROP TABLE IF EXISTS videos CASCADE`;
 
@@ -83,6 +102,38 @@ export async function initDatabase() {
 
     await sql`
       CREATE INDEX idx_votes_created ON votes(created_at DESC)
+    `;
+
+    // Create ideas table (for pre-production video concept testing)
+    await sql`
+      CREATE TABLE ideas (
+        id SERIAL PRIMARY KEY,
+        title TEXT NOT NULL,
+        thumbnail_text TEXT NOT NULL,
+        description TEXT,
+        elo_rating INTEGER DEFAULT 1500,
+        vote_count INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+
+    // Create idea_votes table
+    await sql`
+      CREATE TABLE idea_votes (
+        id SERIAL PRIMARY KEY,
+        winner_id INTEGER NOT NULL REFERENCES ideas(id),
+        loser_id INTEGER NOT NULL REFERENCES ideas(id),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+
+    // Create indexes for ideas
+    await sql`
+      CREATE INDEX idx_ideas_rating ON ideas(elo_rating DESC)
+    `;
+
+    await sql`
+      CREATE INDEX idx_idea_votes_created ON idea_votes(created_at DESC)
     `;
 
     console.log('Database initialized successfully');

@@ -75,6 +75,51 @@ export async function GET() {
       migrations.push('test_group_vote_count column added');
     }
 
+    // Check if ideas table exists
+    const checkIdeasTable = await sql`
+      SELECT table_name
+      FROM information_schema.tables
+      WHERE table_name = 'ideas'
+    `;
+
+    if (checkIdeasTable.rows.length === 0) {
+      // Create ideas table
+      await sql`
+        CREATE TABLE ideas (
+          id SERIAL PRIMARY KEY,
+          title TEXT NOT NULL,
+          thumbnail_text TEXT NOT NULL,
+          description TEXT,
+          elo_rating INTEGER DEFAULT 1500,
+          vote_count INTEGER DEFAULT 0,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `;
+      migrations.push('ideas table created');
+
+      // Create idea_votes table
+      await sql`
+        CREATE TABLE idea_votes (
+          id SERIAL PRIMARY KEY,
+          winner_id INTEGER NOT NULL REFERENCES ideas(id),
+          loser_id INTEGER NOT NULL REFERENCES ideas(id),
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `;
+      migrations.push('idea_votes table created');
+
+      // Create indexes
+      await sql`
+        CREATE INDEX idx_ideas_rating ON ideas(elo_rating DESC)
+      `;
+      migrations.push('ideas rating index created');
+
+      await sql`
+        CREATE INDEX idx_idea_votes_created ON idea_votes(created_at DESC)
+      `;
+      migrations.push('idea_votes index created');
+    }
+
     if (migrations.length === 0) {
       return NextResponse.json({
         success: true,
