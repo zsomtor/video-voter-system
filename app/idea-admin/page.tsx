@@ -33,7 +33,9 @@ export default function IdeaAdminPage() {
     console.log('fetchIdeas called');
     setLoading(true);
     try {
-      const response = await fetch('/api/idea-rankings', {
+      // Add timestamp to force cache bust
+      const timestamp = new Date().getTime();
+      const response = await fetch(`/api/idea-rankings?t=${timestamp}`, {
         cache: 'no-store',
         headers: {
           'Cache-Control': 'no-cache',
