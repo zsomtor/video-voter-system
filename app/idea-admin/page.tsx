@@ -30,12 +30,16 @@ export default function IdeaAdminPage() {
   const [deleting, setDeleting] = useState<number | null>(null);
 
   const fetchIdeas = async () => {
+    console.log('fetchIdeas called');
     setLoading(true);
     try {
       const response = await fetch('/api/idea-rankings');
+      console.log('Rankings response status:', response.status);
       const data = await response.json();
+      console.log('Rankings data:', data);
       setIdeas(data.ideas);
       setTotalVotes(data.totalVotes);
+      console.log('State updated, ideas count:', data.ideas.length);
     } catch (error) {
       console.error('Error fetching ideas:', error);
     } finally {
