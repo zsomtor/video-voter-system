@@ -12,10 +12,17 @@ interface Video {
   test_group_id: string;
 }
 
+interface TestGroup {
+  id: string;
+  videoCount: number;
+}
+
 export default function TestGroupVote() {
   const [video1, setVideo1] = useState<Video | null>(null);
   const [video2, setVideo2] = useState<Video | null>(null);
   const [testGroupId, setTestGroupId] = useState<string>('');
+  const [availableTestGroups, setAvailableTestGroups] = useState<TestGroup[]>([]);
+  const [selectedTestGroup, setSelectedTestGroup] = useState<string>('');
   const [votesRemaining, setVotesRemaining] = useState(15);
   const [totalVotes, setTotalVotes] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -29,12 +36,22 @@ export default function TestGroupVote() {
   const fetchNewPair = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/test-group-pair');
+      const url = selectedTestGroup
+        ? `/api/test-group-pair?testGroupId=${encodeURIComponent(selectedTestGroup)}`
+        : '/api/test-group-pair';
+
+      const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
         setVideo1(data.video1);
         setVideo2(data.video2);
         setTestGroupId(data.testGroupId);
+        setAvailableTestGroups(data.availableTestGroups || []);
+
+        // Set selected test group if not already set
+        if (!selectedTestGroup && data.testGroupId) {
+          setSelectedTestGroup(data.testGroupId);
+        }
       } else {
         const error = await response.json();
         alert(error.error || 'Nem találhatók test group videók');
@@ -100,6 +117,20 @@ export default function TestGroupVote() {
     setShowResults(false);
     fetchNewPair();
   };
+
+  const handleTestGroupChange = (newTestGroupId: string) => {
+    setSelectedTestGroup(newTestGroupId);
+    setVotesRemaining(15);
+    setTotalVotes(0);
+    setShowResults(false);
+    // Fetch new pair will be triggered by the useEffect when selectedTestGroup changes
+  };
+
+  useEffect(() => {
+    if (selectedTestGroup) {
+      fetchNewPair();
+    }
+  }, [selectedTestGroup]);
 
   if (showResults) {
     // Group results by test_group_id
@@ -202,12 +233,33 @@ export default function TestGroupVote() {
           <h1 className="text-5xl font-bold text-gray-800 mb-4">
             🧪 A/B Test Szavazás
           </h1>
-          <p className="text-xl text-gray-600 mb-2">
+          <p className="text-xl text-gray-600 mb-4">
             Hasonlítsd össze az azonos test group videóit!
           </p>
+
+          {/* Test Group Selector */}
+          {availableTestGroups.length > 0 && (
+            <div className="flex justify-center items-center gap-4 mb-4">
+              <label className="text-lg font-semibold text-gray-700">
+                Test Group:
+              </label>
+              <select
+                value={selectedTestGroup}
+                onChange={(e) => handleTestGroupChange(e.target.value)}
+                className="px-6 py-3 bg-white border-2 border-orange-300 rounded-lg font-semibold text-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer"
+              >
+                {availableTestGroups.map((group) => (
+                  <option key={group.id} value={group.id}>
+                    {group.id} ({group.videoCount} videó)
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {testGroupId && (
             <div className="inline-block bg-orange-200 text-orange-900 px-6 py-2 rounded-full font-semibold text-lg">
-              Test Group: {testGroupId}
+              Aktív: {testGroupId}
             </div>
           )}
         </div>

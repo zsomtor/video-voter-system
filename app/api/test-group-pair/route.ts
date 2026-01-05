@@ -1,13 +1,19 @@
 import { NextResponse } from 'next/server';
 import { sql } from '@vercel/postgres';
 
+// Disable caching for this route
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 /**
- * GET /api/test-group-pair
- * Returns a random pair of videos from the same test group
- * Uses uncertainty-aware pairing based on test_group_vote_count
+ * GET /api/test-group-pair?testGroupId=xxx
+ * Returns a random pair of videos from the specified test group (or random if not specified)
  */
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const requestedTestGroupId = searchParams.get('testGroupId');
+
     // Get all videos that have a test_group_id
     const result = await sql`
       SELECT * FROM videos
@@ -46,10 +52,25 @@ export async function GET() {
       );
     }
 
-    // Pick a random test group
-    const [testGroupId, groupVideos] = validTestGroups[
-      Math.floor(Math.random() * validTestGroups.length)
-    ];
+    // If a specific test group is requested, use it; otherwise pick random
+    let testGroupId: string;
+    let groupVideos: any[];
+
+    if (requestedTestGroupId) {
+      const requestedGroup = validTestGroups.find(([id]) => id === requestedTestGroupId);
+      if (!requestedGroup) {
+        return NextResponse.json(
+          { error: `Test group "${requestedTestGroupId}" not found or has less than 2 videos` },
+          { status: 404 }
+        );
+      }
+      [testGroupId, groupVideos] = requestedGroup;
+    } else {
+      // Pick a random test group
+      [testGroupId, groupVideos] = validTestGroups[
+        Math.floor(Math.random() * validTestGroups.length)
+      ];
+    }
 
     // Simple random pairing - all pairs have equal probability
     // Shuffle the videos and take the first two
@@ -57,10 +78,17 @@ export async function GET() {
     const firstVideo = shuffled[0];
     const secondVideo = shuffled[1];
 
+    // Return available test groups as well
+    const availableTestGroups = validTestGroups.map(([id, videos]) => ({
+      id,
+      videoCount: videos.length,
+    }));
+
     return NextResponse.json({
       video1: firstVideo,
       video2: secondVideo,
       testGroupId,
+      availableTestGroups,
     });
   } catch (error) {
     console.error('Error getting test group pair:', error);
