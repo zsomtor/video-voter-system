@@ -47,9 +47,9 @@ export async function POST(request: Request) {
     // Calculate new ELO ratings with adaptive K-factor
     // Higher K-factor for ideas with fewer votes = faster convergence to true rating
     const getKFactor = (voteCount: number): number => {
-      if (voteCount < 10) return 50;  // New ideas move quickly
-      if (voteCount < 30) return 32;  // Medium confidence
-      return 20;                      // Established ideas move slowly
+      if (voteCount < 10) return 32;  // New ideas move moderately
+      if (voteCount < 30) return 24;  // Medium confidence
+      return 16;                      // Established ideas move slowly
     };
 
     const winnerK = getKFactor(winner.vote_count || 0);
