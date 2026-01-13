@@ -77,6 +77,21 @@ export default function IdeaVote() {
     }
   };
 
+  const handleSkip = async () => {
+    if (!idea1 || !idea2) return;
+
+    const newVotesRemaining = votesRemaining - 1;
+    setVotesRemaining(newVotesRemaining);
+    setTotalVotes(totalVotes + 1);
+
+    if (newVotesRemaining === 0) {
+      await fetchResults();
+      setShowResults(true);
+    } else {
+      await fetchNewPair();
+    }
+  };
+
   const fetchResults = async () => {
     try {
       const response = await fetch('/api/idea-rankings');
@@ -206,41 +221,54 @@ export default function IdeaVote() {
             <div className="text-2xl text-gray-600">Betöltés...</div>
           </div>
         ) : idea1 && idea2 ? (
-          <div className="grid md:grid-cols-2 gap-8">
-            {/* Idea 1 */}
-            <div
-              onClick={() => handleVote(idea1.id, idea2.id)}
-              className="bg-white rounded-2xl shadow-xl p-8 cursor-pointer transform transition-all hover:scale-105 hover:shadow-2xl border-4 border-transparent hover:border-green-500"
-            >
-              <div className="aspect-video bg-gradient-to-br from-green-400 to-teal-500 rounded-xl mb-6 flex items-center justify-center">
-                <div className="text-white text-center p-8">
-                  <div className="text-6xl mb-4">💡</div>
-                  <div className="text-3xl font-bold">{idea1.thumbnail_text}</div>
+          <>
+            <div className="grid md:grid-cols-2 gap-8">
+              {/* Idea 1 */}
+              <div
+                onClick={() => handleVote(idea1.id, idea2.id)}
+                className="bg-white rounded-2xl shadow-xl p-8 cursor-pointer transform transition-all hover:scale-105 hover:shadow-2xl border-4 border-transparent hover:border-green-500"
+              >
+                <div className="aspect-video bg-gradient-to-br from-green-400 to-teal-500 rounded-xl mb-6 flex items-center justify-center">
+                  <div className="text-white text-center p-8">
+                    <div className="text-6xl mb-4">💡</div>
+                    <div className="text-3xl font-bold">{idea1.thumbnail_text}</div>
+                  </div>
                 </div>
+                <h3 className="text-2xl font-bold text-gray-800 mb-3">{idea1.title}</h3>
+                {idea1.description && (
+                  <p className="text-gray-600 italic">"{idea1.description}"</p>
+                )}
               </div>
-              <h3 className="text-2xl font-bold text-gray-800 mb-3">{idea1.title}</h3>
-              {idea1.description && (
-                <p className="text-gray-600 italic">"{idea1.description}"</p>
-              )}
+
+              {/* Idea 2 */}
+              <div
+                onClick={() => handleVote(idea2.id, idea1.id)}
+                className="bg-white rounded-2xl shadow-xl p-8 cursor-pointer transform transition-all hover:scale-105 hover:shadow-2xl border-4 border-transparent hover:border-green-500"
+              >
+                <div className="aspect-video bg-gradient-to-br from-teal-400 to-green-500 rounded-xl mb-6 flex items-center justify-center">
+                  <div className="text-white text-center p-8">
+                    <div className="text-6xl mb-4">💡</div>
+                    <div className="text-3xl font-bold">{idea2.thumbnail_text}</div>
+                  </div>
+                </div>
+                <h3 className="text-2xl font-bold text-gray-800 mb-3">{idea2.title}</h3>
+                {idea2.description && (
+                  <p className="text-gray-600 italic">"{idea2.description}"</p>
+                )}
+              </div>
             </div>
 
-            {/* Idea 2 */}
-            <div
-              onClick={() => handleVote(idea2.id, idea1.id)}
-              className="bg-white rounded-2xl shadow-xl p-8 cursor-pointer transform transition-all hover:scale-105 hover:shadow-2xl border-4 border-transparent hover:border-green-500"
-            >
-              <div className="aspect-video bg-gradient-to-br from-teal-400 to-green-500 rounded-xl mb-6 flex items-center justify-center">
-                <div className="text-white text-center p-8">
-                  <div className="text-6xl mb-4">💡</div>
-                  <div className="text-3xl font-bold">{idea2.thumbnail_text}</div>
-                </div>
-              </div>
-              <h3 className="text-2xl font-bold text-gray-800 mb-3">{idea2.title}</h3>
-              {idea2.description && (
-                <p className="text-gray-600 italic">"{idea2.description}"</p>
-              )}
+            {/* Skip Button */}
+            <div className="mt-8 text-center">
+              <button
+                onClick={handleSkip}
+                disabled={isLoading}
+                className="px-6 py-3 bg-gray-400 text-white rounded-lg font-semibold hover:bg-gray-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                🤷 Nem tudom dönteni
+              </button>
             </div>
-          </div>
+          </>
         ) : (
           <div className="text-center py-20">
             <div className="text-6xl mb-4">😕</div>
