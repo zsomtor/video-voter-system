@@ -20,6 +20,11 @@ export default function IdeaAdminPage() {
   const [editingIdea, setEditingIdea] = useState<RankedIdea | null>(null);
   const [totalVotes, setTotalVotes] = useState(0);
 
+  // Auth state
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [password, setPassword] = useState('');
+
   // Form state
   const [formData, setFormData] = useState({
     title: '',
@@ -44,8 +49,32 @@ export default function IdeaAdminPage() {
   };
 
   useEffect(() => {
+    // Check if already authenticated
+    const auth = sessionStorage.getItem('idea_admin_auth');
+    if (auth === 'true') {
+      setIsAuthenticated(true);
+    }
     fetchIdeas();
   }, []);
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Simple password check - you can change this password
+    if (password === 'bazu2024') {
+      sessionStorage.setItem('idea_admin_auth', 'true');
+      setIsAuthenticated(true);
+      setShowAuthModal(false);
+      setPassword('');
+    } else {
+      alert('Hibás jelszó!');
+      setPassword('');
+    }
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('idea_admin_auth');
+    setIsAuthenticated(false);
+  };
 
   const handleAddIdea = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -158,14 +187,76 @@ export default function IdeaAdminPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-teal-100 py-8 px-4">
+      {/* Secret Auth Button - Bottom Left */}
+      {!isAuthenticated && (
+        <button
+          onClick={() => setShowAuthModal(true)}
+          className="fixed bottom-4 left-4 w-10 h-10 bg-gray-300 hover:bg-gray-400 text-gray-600 rounded-full flex items-center justify-center opacity-30 hover:opacity-100 transition-all shadow-lg"
+          title="Admin bejelentkezés"
+        >
+          🔐
+        </button>
+      )}
+
+      {/* Logout Button - Top Right */}
+      {isAuthenticated && (
+        <button
+          onClick={handleLogout}
+          className="fixed top-4 right-4 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-semibold shadow-lg transition-all"
+        >
+          Kijelentkezés
+        </button>
+      )}
+
+      {/* Auth Modal */}
+      {showAuthModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              🔐 Admin Bejelentkezés
+            </h2>
+            <form onSubmit={handleLogin}>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Jelszó"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                autoFocus
+              />
+              <div className="flex gap-3">
+                <button
+                  type="submit"
+                  className="flex-1 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition font-semibold"
+                >
+                  Belépés
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAuthModal(false);
+                    setPassword('');
+                  }}
+                  className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+                >
+                  Mégse
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="max-w-7xl mx-auto mb-8">
         <div className="bg-white rounded-lg shadow-lg p-6">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            💡 Videó Ötletek Admin
+            💡 Videó Ötletek {isAuthenticated && 'Admin'}
           </h1>
           <p className="text-gray-600 mb-4">
-            Kezeld a videó ötleteidet és nézd meg melyeket érdemes leforgatni
+            {isAuthenticated
+              ? 'Kezeld a videó ötleteidet és nézd meg melyeket érdemes leforgatni'
+              : 'Nézd meg a rangsorolt videó ötleteket'}
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -189,21 +280,23 @@ export default function IdeaAdminPage() {
             </div>
           </div>
 
-          <button
-            onClick={() => {
-              setShowAddForm(!showAddForm);
-              setEditingIdea(null);
-              setFormData({ title: '', thumbnailText: '', description: '' });
-            }}
-            className="mt-4 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition"
-          >
-            {showAddForm ? 'Bezárás' : '+ Új Ötlet Hozzáadása'}
-          </button>
+          {isAuthenticated && (
+            <button
+              onClick={() => {
+                setShowAddForm(!showAddForm);
+                setEditingIdea(null);
+                setFormData({ title: '', thumbnailText: '', description: '' });
+              }}
+              className="mt-4 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition"
+            >
+              {showAddForm ? 'Bezárás' : '+ Új Ötlet Hozzáadása'}
+            </button>
+          )}
         </div>
       </div>
 
       {/* Add/Edit Form */}
-      {(showAddForm || editingIdea) && (
+      {isAuthenticated && (showAddForm || editingIdea) && (
         <div className="max-w-3xl mx-auto mb-8">
           <div className="bg-white rounded-lg shadow-lg p-6">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
@@ -290,7 +383,9 @@ export default function IdeaAdminPage() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ötlet</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ELO</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Szavazatok</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Műveletek</th>
+                    {isAuthenticated && (
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Műveletek</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -320,23 +415,25 @@ export default function IdeaAdminPage() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-gray-900">{idea.vote_count}</div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => startEdit(idea)}
-                            className="px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition text-sm"
-                          >
-                            Szerkeszt
-                          </button>
-                          <button
-                            onClick={() => handleDelete(idea.id)}
-                            disabled={deleting === idea.id}
-                            className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition text-sm disabled:opacity-50"
-                          >
-                            {deleting === idea.id ? 'Törlés...' : 'Törlés'}
-                          </button>
-                        </div>
-                      </td>
+                      {isAuthenticated && (
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => startEdit(idea)}
+                              className="px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition text-sm"
+                            >
+                              Szerkeszt
+                            </button>
+                            <button
+                              onClick={() => handleDelete(idea.id)}
+                              disabled={deleting === idea.id}
+                              className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition text-sm disabled:opacity-50"
+                            >
+                              {deleting === idea.id ? 'Törlés...' : 'Törlés'}
+                            </button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -349,14 +446,18 @@ export default function IdeaAdminPage() {
           <div className="bg-white rounded-lg shadow-lg p-12 text-center">
             <div className="text-6xl mb-4">💡</div>
             <p className="text-gray-600 text-lg mb-4">
-              Még nincsenek ötletek. Add hozzá az első videó ötletedet!
+              {isAuthenticated
+                ? 'Még nincsenek ötletek. Add hozzá az első videó ötletedet!'
+                : 'Még nincsenek ötletek a rendszerben.'}
             </p>
-            <button
-              onClick={() => setShowAddForm(true)}
-              className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition"
-            >
-              Első Ötlet Hozzáadása
-            </button>
+            {isAuthenticated && (
+              <button
+                onClick={() => setShowAddForm(true)}
+                className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition"
+              >
+                Első Ötlet Hozzáadása
+              </button>
+            )}
           </div>
         </div>
       )}
