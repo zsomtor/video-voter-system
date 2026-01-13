@@ -44,8 +44,17 @@ export async function POST(request: Request) {
       );
     }
 
-    // Calculate new ELO ratings
-    const K = 32; // K-factor
+    // Calculate new ELO ratings with adaptive K-factor
+    // Higher K-factor for ideas with fewer votes = faster convergence to true rating
+    const getKFactor = (voteCount: number): number => {
+      if (voteCount < 10) return 50;  // New ideas move quickly
+      if (voteCount < 30) return 32;  // Medium confidence
+      return 20;                      // Established ideas move slowly
+    };
+
+    const winnerK = getKFactor(winner.vote_count || 0);
+    const loserK = getKFactor(loser.vote_count || 0);
+
     const winnerRating = winner.elo_rating || 1500;
     const loserRating = loser.elo_rating || 1500;
 
@@ -53,9 +62,9 @@ export async function POST(request: Request) {
     const winnerExpected = 1 / (1 + Math.pow(10, (loserRating - winnerRating) / 400));
     const loserExpected = 1 / (1 + Math.pow(10, (winnerRating - loserRating) / 400));
 
-    // New ratings
-    const newWinnerRating = Math.round(winnerRating + K * (1 - winnerExpected));
-    const newLoserRating = Math.round(loserRating + K * (0 - loserExpected));
+    // New ratings - using individual K-factors for each idea
+    const newWinnerRating = Math.round(winnerRating + winnerK * (1 - winnerExpected));
+    const newLoserRating = Math.round(loserRating + loserK * (0 - loserExpected));
 
     // Update both ideas in a transaction
     await sql`BEGIN`;
