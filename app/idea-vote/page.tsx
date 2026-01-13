@@ -220,12 +220,8 @@ export default function IdeaVote() {
               </div>
               <h3 className="text-2xl font-bold text-gray-800 mb-3">{idea1.title}</h3>
               {idea1.description && (
-                <p className="text-gray-600 italic mb-4">"{idea1.description}"</p>
+                <p className="text-gray-600 italic">"{idea1.description}"</p>
               )}
-              <div className="flex items-center justify-between text-sm text-gray-500">
-                <div>ELO: {idea1.elo_rating}</div>
-                <div>{idea1.vote_count} szavazat</div>
-              </div>
             </div>
 
             {/* Idea 2 */}
@@ -241,12 +237,8 @@ export default function IdeaVote() {
               </div>
               <h3 className="text-2xl font-bold text-gray-800 mb-3">{idea2.title}</h3>
               {idea2.description && (
-                <p className="text-gray-600 italic mb-4">"{idea2.description}"</p>
+                <p className="text-gray-600 italic">"{idea2.description}"</p>
               )}
-              <div className="flex items-center justify-between text-sm text-gray-500">
-                <div>ELO: {idea2.elo_rating}</div>
-                <div>{idea2.vote_count} szavazat</div>
-              </div>
             </div>
           </div>
         ) : (
